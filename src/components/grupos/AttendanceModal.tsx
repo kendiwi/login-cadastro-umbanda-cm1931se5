@@ -68,7 +68,7 @@ export function AttendanceModal({
       <DialogContent className="sm:max-w-[550px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl text-purple-900 flex items-center justify-between">
-            <span>Lista de Presença</span>
+            <span className="truncate pr-4">{event.name} - Lista de Presença</span>
             <Badge
               variant="outline"
               className={isClosed ? 'bg-slate-100 text-slate-700' : 'bg-purple-100 text-purple-700'}

@@ -5,6 +5,7 @@ import useRealtime from '@/hooks/use-realtime'
 export interface GiraEvent {
   id: string
   groupId: string
+  name: string
   date: string
   time: string
   location: string
@@ -40,6 +41,7 @@ export function useEvents(groupId: string) {
         return {
           id: e.id,
           groupId: e.grupo_id,
+          name: e.nome_evento || 'Evento sem nome',
           date: e.data ? e.data.split(' ')[0] : '',
           time: e.hora,
           location: e.local,
@@ -70,6 +72,7 @@ export function useEvents(groupId: string) {
   const addEvent = async (event: Omit<GiraEvent, 'id' | 'groupId'>) => {
     const createdEvent = await pb.collection('eventos_gira').create({
       grupo_id: groupId,
+      nome_evento: event.name,
       lista_id: event.listId || null,
       data: event.date ? event.date + ' 12:00:00.000Z' : null,
       hora: event.time,
@@ -101,6 +104,7 @@ export function useEvents(groupId: string) {
 
   const updateEvent = async (id: string, event: Partial<GiraEvent>) => {
     if (
+      event.name !== undefined ||
       event.status !== undefined ||
       event.date !== undefined ||
       event.time !== undefined ||
@@ -109,6 +113,7 @@ export function useEvents(groupId: string) {
       event.listId !== undefined
     ) {
       const data: any = {}
+      if (event.name !== undefined) data.nome_evento = event.name
       if (event.date) data.data = event.date + ' 12:00:00.000Z'
       if (event.time) data.hora = event.time
       if (event.location) data.local = event.location

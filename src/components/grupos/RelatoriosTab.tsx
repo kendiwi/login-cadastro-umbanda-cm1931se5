@@ -301,7 +301,7 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                   <TableHeader className="bg-purple-50/20">
                     <TableRow>
                       <TableHead className="font-semibold text-purple-900 whitespace-nowrap">
-                        Data / Local
+                        Evento
                       </TableHead>
                       <TableHead className="font-semibold text-purple-900 text-center hidden md:table-cell">
                         Total Esperados
@@ -321,7 +321,10 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                     {eventStats.map((ev) => (
                       <TableRow key={ev.id}>
                         <TableCell>
-                          <div className="font-medium text-purple-900 whitespace-nowrap">
+                          <div className="font-bold text-purple-900 whitespace-nowrap">
+                            {ev.name}
+                          </div>
+                          <div className="font-medium text-slate-700 whitespace-nowrap text-sm mt-1">
                             {ev.date.split('-').reverse().join('/')}
                           </div>
                           <div className="text-xs text-muted-foreground whitespace-nowrap">

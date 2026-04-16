@@ -51,6 +51,7 @@ export function EventsTab({
   const [editingEvent, setEditingEvent] = useState<GiraEvent | null>(null)
   const [attendanceEvent, setAttendanceEvent] = useState<GiraEvent | null>(null)
 
+  const [name, setName] = useState('')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [location, setLocation] = useState('')
@@ -62,6 +63,7 @@ export function EventsTab({
   const openModal = (ev?: GiraEvent) => {
     if (ev) {
       setEditingEvent(ev)
+      setName(ev.name)
       setDate(ev.date)
       setTime(ev.time)
       setLocation(ev.location)
@@ -71,6 +73,7 @@ export function EventsTab({
       setStatus(ev.status)
     } else {
       setEditingEvent(null)
+      setName('')
       setDate('')
       setTime('')
       setLocation('')
@@ -83,10 +86,11 @@ export function EventsTab({
   }
 
   const handleSave = async () => {
-    if (!date || !time || !location) return
+    if (!name || !date || !time || !location) return
     if (listType === 'specific' && !listId) return
 
     const eventData = {
+      name,
       date,
       time,
       location,
@@ -156,7 +160,7 @@ export function EventsTab({
           <TableHeader className="bg-purple-50/50">
             <TableRow className="hover:bg-transparent">
               <TableHead className="font-semibold text-purple-900 whitespace-nowrap">
-                Data e Hora
+                Evento
               </TableHead>
               <TableHead className="font-semibold text-purple-900 hidden md:table-cell">
                 Local
@@ -174,11 +178,10 @@ export function EventsTab({
             {events.map((ev) => (
               <TableRow key={ev.id} className="hover:bg-purple-50/30">
                 <TableCell className="whitespace-nowrap">
-                  <div className="font-medium text-purple-900">
-                    {ev.date.split('-').reverse().join('/')}
-                  </div>
+                  <div className="font-bold text-purple-900">{ev.name}</div>
                   <div className="text-sm text-muted-foreground flex items-center mt-1">
-                    <Calendar className="w-3 h-3 mr-1" /> {ev.time}
+                    <Calendar className="w-3 h-3 mr-1" /> {ev.date.split('-').reverse().join('/')}{' '}
+                    às {ev.time}
                   </div>
                   <div className="text-xs text-slate-500 mt-1 md:hidden">{ev.location}</div>
                 </TableCell>
@@ -278,6 +281,15 @@ export function EventsTab({
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome do Evento</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Festa de Iemanjá, Gira de Caboclos..."
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Data</Label>
@@ -386,7 +398,9 @@ export function EventsTab({
             <Button
               onClick={handleSave}
               className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
-              disabled={!date || !time || !location || (listType === 'specific' && !listId)}
+              disabled={
+                !name || !date || !time || !location || (listType === 'specific' && !listId)
+              }
             >
               Salvar
             </Button>
