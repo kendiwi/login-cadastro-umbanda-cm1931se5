@@ -161,6 +161,4 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </SidebarInset>
-    </SidebarProvider>
-  )
-}
+    </Sideb
