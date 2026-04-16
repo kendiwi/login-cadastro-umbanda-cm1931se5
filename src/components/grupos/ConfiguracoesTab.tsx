@@ -46,14 +46,14 @@ export function ConfiguracoesTab({
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
+      <div className="flex flex-col-reverse sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-purple-100 shadow-sm gap-3 sm:gap-0">
         <div>
           <h2 className="text-xl font-bold text-purple-900">Configurações do Grupo</h2>
           <p className="text-sm text-muted-foreground">
             Atualize as informações principais do seu grupo.
           </p>
         </div>
-        <div className="p-2.5 bg-purple-100 text-purple-700 rounded-full shadow-sm">
+        <div className="p-2.5 bg-purple-100 text-purple-700 rounded-full shadow-sm self-end sm:self-auto">
           <Settings className="w-5 h-5" />
         </div>
       </div>
@@ -95,11 +95,11 @@ export function ConfiguracoesTab({
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex justify-end border-t border-purple-50 pt-4 bg-slate-50/50 rounded-b-xl">
+          <CardFooter className="flex flex-col sm:flex-row sm:justify-end border-t border-purple-50 pt-4 bg-slate-50/50 rounded-b-xl">
             <Button
               type="submit"
               disabled={loading || (!nome.trim() && !descricao.trim())}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
             >
               <Save className="w-4 h-4 mr-2" />
               {loading ? 'Salvando...' : 'Salvar Alterações'}

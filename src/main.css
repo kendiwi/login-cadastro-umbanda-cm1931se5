@@ -116,4 +116,42 @@
   .animate-slide-up {
     animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   }
+
+  /* Mobile-first touch targets */
+  @media (max-width: 768px) {
+    button:not([role='switch']),
+    [role='button']:not([role='switch']),
+    input,
+    select,
+    textarea {
+      min-height: 44px;
+    }
+
+    /* Ensure interactive icon buttons are 44x44 minimum */
+    button:not([role='switch']).w-8,
+    button:not([role='switch']).w-9,
+    button:not([role='switch']).w-10,
+    [role='button']:not([role='switch']).w-8,
+    [role='button']:not([role='switch']).w-9,
+    [role='button']:not([role='switch']).w-10 {
+      min-width: 44px;
+    }
+    button:not([role='switch']).h-8,
+    button:not([role='switch']).h-9,
+    button:not([role='switch']).h-10,
+    [role='button']:not([role='switch']).h-8,
+    [role='button']:not([role='switch']).h-9,
+    [role='button']:not([role='switch']).h-10 {
+      min-height: 44px;
+    }
+  }
+
+  /* Utility to hide scrollbars but allow scrolling */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

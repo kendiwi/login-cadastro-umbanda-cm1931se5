@@ -100,14 +100,16 @@ export default function Requests() {
               <Table>
                 <TableHeader className="bg-white">
                   <TableRow className="border-purple-100 hover:bg-transparent">
-                    <TableHead className="font-semibold text-purple-900">
+                    <TableHead className="font-semibold text-purple-900 whitespace-nowrap">
                       Nome do Solicitante
                     </TableHead>
-                    <TableHead className="font-semibold text-purple-900">Email</TableHead>
+                    <TableHead className="font-semibold text-purple-900 hidden sm:table-cell">
+                      Email
+                    </TableHead>
                     <TableHead className="font-semibold text-purple-900 hidden md:table-cell">
                       Grupo
                     </TableHead>
-                    <TableHead className="font-semibold text-purple-900">
+                    <TableHead className="font-semibold text-purple-900 hidden lg:table-cell">
                       Data da Solicitação
                     </TableHead>
                     <TableHead className="text-right font-semibold text-purple-900">
@@ -126,10 +128,23 @@ export default function Requests() {
                         key={req.id}
                         className="border-purple-100 hover:bg-purple-50/50 transition-colors"
                       >
-                        <TableCell className="font-medium text-slate-900">
+                        <TableCell className="font-medium text-slate-900 whitespace-nowrap">
                           {requester.name || requester.email}
+                          <div className="text-xs text-slate-500 sm:hidden mt-0.5">
+                            {requester.email}
+                          </div>
+                          <div className="text-xs mt-1 md:hidden">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 px-1 border-purple-200 text-purple-700 bg-purple-50"
+                            >
+                              {group.nome}
+                            </Badge>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-slate-600">{requester.email}</TableCell>
+                        <TableCell className="text-slate-600 hidden sm:table-cell">
+                          {requester.email}
+                        </TableCell>
                         <TableCell className="text-slate-600 hidden md:table-cell">
                           <Badge
                             variant="outline"
@@ -138,7 +153,7 @@ export default function Requests() {
                             {group.nome}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-500">
+                        <TableCell className="text-slate-500 hidden lg:table-cell">
                           {req.data_solicitacao
                             ? format(new Date(req.data_solicitacao), 'dd/MM/yyyy')
                             : req.created
@@ -146,19 +161,20 @@ export default function Requests() {
                               : '-'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex flex-col sm:flex-row items-end justify-end gap-2">
                             <Button
                               size="sm"
                               variant="destructive"
+                              className="w-full sm:w-auto"
                               onClick={() => handleDeny(req.id, requester.name || requester.email)}
                             >
-                              <X className="w-4 h-4 mr-1 sm:mr-0 lg:mr-1" />
-                              <span className="hidden lg:inline">Negar</span>
+                              <X className="w-4 h-4 mr-2 sm:mr-0 lg:mr-1" />
+                              <span className="inline sm:hidden lg:inline">Negar</span>
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                              className="w-full sm:w-auto text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
                               onClick={() =>
                                 handleApprove(
                                   req.id,
@@ -168,8 +184,8 @@ export default function Requests() {
                                 )
                               }
                             >
-                              <Check className="w-4 h-4 mr-1 sm:mr-0 lg:mr-1" />
-                              <span className="hidden lg:inline">Aprovar</span>
+                              <Check className="w-4 h-4 mr-2 sm:mr-0 lg:mr-1" />
+                              <span className="inline sm:hidden lg:inline">Aprovar</span>
                             </Button>
                           </div>
                         </TableCell>

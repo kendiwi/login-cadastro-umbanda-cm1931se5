@@ -211,13 +211,13 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                   <TableHeader className="bg-purple-50/20">
                     <TableRow>
                       <TableHead className="font-semibold text-purple-900">Médium</TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center">
+                      <TableHead className="font-semibold text-purple-900 text-center hidden md:table-cell">
                         Eventos Esperados
                       </TableHead>
                       <TableHead className="font-semibold text-purple-900 text-center">
                         Presenças
                       </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center">
+                      <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell">
                         Faltas
                       </TableHead>
                       <TableHead className="font-semibold text-purple-900 text-right">
@@ -229,19 +229,21 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                     {mediumStats.map((m) => (
                       <TableRow key={m.id}>
                         <TableCell>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-[120px]">
                             <Avatar className="w-8 h-8">
                               <AvatarImage src={m.foto} />
                               <AvatarFallback>{m.nome.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{m.nome}</span>
+                            <span className="font-medium whitespace-nowrap">{m.nome}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-center">{m.totalEvents}</TableCell>
+                        <TableCell className="text-center hidden md:table-cell">
+                          {m.totalEvents}
+                        </TableCell>
                         <TableCell className="text-center text-emerald-600 font-medium">
                           {m.presencas}
                         </TableCell>
-                        <TableCell className="text-center text-rose-600 font-medium">
+                        <TableCell className="text-center text-rose-600 font-medium hidden sm:table-cell">
                           {m.faltas}
                         </TableCell>
                         <TableCell className="text-right">
@@ -287,14 +289,16 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                 <Table>
                   <TableHeader className="bg-purple-50/20">
                     <TableRow>
-                      <TableHead className="font-semibold text-purple-900">Data / Local</TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center">
+                      <TableHead className="font-semibold text-purple-900 whitespace-nowrap">
+                        Data / Local
+                      </TableHead>
+                      <TableHead className="font-semibold text-purple-900 text-center hidden md:table-cell">
                         Total Esperados
                       </TableHead>
                       <TableHead className="font-semibold text-purple-900 text-center">
                         Presentes
                       </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center">
+                      <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell">
                         Ausentes
                       </TableHead>
                       <TableHead className="font-semibold text-purple-900 text-right">
@@ -306,16 +310,20 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                     {eventStats.map((ev) => (
                       <TableRow key={ev.id}>
                         <TableCell>
-                          <div className="font-medium text-purple-900">
+                          <div className="font-medium text-purple-900 whitespace-nowrap">
                             {ev.date.split('-').reverse().join('/')}
                           </div>
-                          <div className="text-xs text-muted-foreground">{ev.location}</div>
+                          <div className="text-xs text-muted-foreground whitespace-nowrap">
+                            {ev.location}
+                          </div>
                         </TableCell>
-                        <TableCell className="text-center">{ev.totalEsperados}</TableCell>
+                        <TableCell className="text-center hidden md:table-cell">
+                          {ev.totalEsperados}
+                        </TableCell>
                         <TableCell className="text-center text-emerald-600 font-medium">
                           {ev.presentes}
                         </TableCell>
-                        <TableCell className="text-center text-rose-600 font-medium">
+                        <TableCell className="text-center text-rose-600 font-medium hidden sm:table-cell">
                           {ev.ausentes}
                         </TableCell>
                         <TableCell className="text-right">

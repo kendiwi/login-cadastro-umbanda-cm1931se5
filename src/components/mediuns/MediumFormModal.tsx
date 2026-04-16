@@ -241,17 +241,17 @@ export function MediumFormModal({ isOpen, onClose, onSave, initialData }: Medium
             </div>
           </div>
         </div>
-        <DialogFooter className="pt-2">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-2">
           <Button
             variant="ghost"
             onClick={onClose}
-            className="text-muted-foreground hover:bg-purple-50 hover:text-purple-700"
+            className="w-full sm:w-auto text-muted-foreground hover:bg-purple-50 hover:text-purple-700"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-purple-600 hover:bg-purple-700 text-white shadow-md"
+            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white shadow-md"
             disabled={!nome.trim()}
           >
             {initialData ? 'Salvar Alterações' : 'Cadastrar Médium'}

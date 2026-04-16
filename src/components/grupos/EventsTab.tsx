@@ -120,8 +120,8 @@ export function EventsTab({
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
-        <div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
+        <div className="mb-3 sm:mb-0 w-full sm:w-auto">
           <h2 className="text-xl font-bold text-purple-900">Eventos de Gira</h2>
           <p className="text-sm text-muted-foreground">
             Agende e gerencie os trabalhos do terreiro.
@@ -130,7 +130,7 @@ export function EventsTab({
         {canManage && (
           <Button
             onClick={() => openModal()}
-            className="bg-purple-600 hover:bg-purple-700 shadow-md"
+            className="bg-purple-600 hover:bg-purple-700 shadow-md w-full sm:w-auto mt-3 sm:mt-0"
           >
             <Plus className="w-4 h-4 mr-2" />
             Criar Evento
@@ -142,9 +142,13 @@ export function EventsTab({
         <Table>
           <TableHeader className="bg-purple-50/50">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold text-purple-900">Data e Hora</TableHead>
-              <TableHead className="font-semibold text-purple-900">Local</TableHead>
-              <TableHead className="font-semibold text-purple-900 text-center">
+              <TableHead className="font-semibold text-purple-900 whitespace-nowrap">
+                Data e Hora
+              </TableHead>
+              <TableHead className="font-semibold text-purple-900 hidden md:table-cell">
+                Local
+              </TableHead>
+              <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell">
                 Médiuns Esperados
               </TableHead>
               <TableHead className="font-semibold text-purple-900">Status</TableHead>
@@ -156,16 +160,17 @@ export function EventsTab({
           <TableBody>
             {events.map((ev) => (
               <TableRow key={ev.id} className="hover:bg-purple-50/30">
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <div className="font-medium text-purple-900">
                     {ev.date.split('-').reverse().join('/')}
                   </div>
                   <div className="text-sm text-muted-foreground flex items-center mt-1">
                     <Calendar className="w-3 h-3 mr-1" /> {ev.time}
                   </div>
+                  <div className="text-xs text-slate-500 mt-1 md:hidden">{ev.location}</div>
                 </TableCell>
-                <TableCell className="text-slate-700">{ev.location}</TableCell>
-                <TableCell className="text-center font-medium text-slate-700">
+                <TableCell className="text-slate-700 hidden md:table-cell">{ev.location}</TableCell>
+                <TableCell className="text-center font-medium text-slate-700 hidden sm:table-cell">
                   <Badge variant="outline" className="bg-slate-50">
                     {getExpectedCount(ev.listId)}
                   </Badge>
@@ -238,7 +243,7 @@ export function EventsTab({
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Data</Label>
                 <Input
@@ -315,13 +320,13 @@ export function EventsTab({
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 mt-4">
+            <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
               disabled={!date || !time || !location || !listId}
             >
               Salvar

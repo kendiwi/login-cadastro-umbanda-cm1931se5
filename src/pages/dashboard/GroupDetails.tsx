@@ -124,7 +124,7 @@ export default function GroupDetails() {
       </div>
 
       <Tabs defaultValue="mediuns" className="w-full">
-        <TabsList className="mb-4 bg-purple-100/50 text-purple-900 border border-purple-200 w-full sm:w-auto overflow-x-auto flex justify-start">
+        <TabsList className="mb-4 bg-purple-100/50 text-purple-900 border border-purple-200 w-full overflow-x-auto flex flex-nowrap justify-start h-auto p-1 scrollbar-hide">
           <TabsTrigger
             value="mediuns"
             className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm"
@@ -205,16 +205,18 @@ export default function GroupDetails() {
               ) : (
                 <div className="overflow-x-auto rounded-md sm:border border-purple-100 bg-white shadow-sm">
                   <Table>
-                    <TableHeader className="bg-purple-50/50 hidden sm:table-header-group">
+                    <TableHeader className="bg-purple-50/50">
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[80px] font-semibold text-purple-900">
+                        <TableHead className="w-[60px] sm:w-[80px] font-semibold text-purple-900">
                           Foto
                         </TableHead>
                         <TableHead className="font-semibold text-purple-900">Nome</TableHead>
-                        <TableHead className="font-semibold text-purple-900">
+                        <TableHead className="font-semibold text-purple-900 hidden md:table-cell">
                           Data de Nascimento
                         </TableHead>
-                        <TableHead className="font-semibold text-purple-900">Contato</TableHead>
+                        <TableHead className="font-semibold text-purple-900 hidden sm:table-cell">
+                          Contato
+                        </TableHead>
                         {canManage && (
                           <TableHead className="text-right font-semibold text-purple-900">
                             Ações
@@ -224,27 +226,22 @@ export default function GroupDetails() {
                     </TableHeader>
                     <TableBody>
                       {mediuns.map((m) => (
-                        <TableRow
-                          key={m.id}
-                          className="flex flex-col sm:table-row border-b border-purple-100/50 sm:border-b py-4 sm:py-0 hover:bg-purple-50/30 transition-colors"
-                        >
-                          <TableCell className="flex sm:table-cell justify-center mb-3 sm:mb-0">
-                            <Avatar className="w-20 h-20 sm:w-12 sm:h-12 border-2 border-amber-200 shadow-sm">
+                        <TableRow key={m.id} className="hover:bg-purple-50/30 transition-colors">
+                          <TableCell className="align-middle">
+                            <Avatar className="w-10 h-10 sm:w-12 sm:h-12 border-2 border-amber-200 shadow-sm">
                               <AvatarImage src={m.foto} className="object-cover" />
-                              <AvatarFallback className="bg-purple-100 text-purple-700 font-semibold text-lg sm:text-base">
+                              <AvatarFallback className="bg-purple-100 text-purple-700 font-semibold">
                                 {m.nome.charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
                           </TableCell>
-                          <TableCell className="text-center sm:text-left align-middle">
-                            <div className="font-medium text-purple-900 text-lg sm:text-base">
-                              {m.nome}
-                            </div>
-                            <div className="text-sm text-muted-foreground sm:hidden mt-1">
+                          <TableCell className="align-middle">
+                            <div className="font-medium text-purple-900">{m.nome}</div>
+                            <div className="text-xs text-muted-foreground sm:hidden mt-0.5">
                               {m.contato || 'Sem contato'}
                             </div>
                           </TableCell>
-                          <TableCell className="text-center sm:text-left text-sm text-muted-foreground sm:text-foreground align-middle mt-1 sm:mt-0">
+                          <TableCell className="align-middle hidden md:table-cell text-sm text-muted-foreground">
                             {m.data_nascimento ? (
                               format(new Date(m.data_nascimento + 'T12:00:00'), 'dd/MM/yyyy')
                             ) : (
@@ -255,28 +252,30 @@ export default function GroupDetails() {
                             {m.contato || '-'}
                           </TableCell>
                           {canManage && (
-                            <TableCell className="flex justify-center sm:table-cell sm:text-right mt-4 sm:mt-0 space-x-2 align-middle">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingMedium(m)
-                                  setIsModalOpen(true)
-                                }}
-                                className="border-purple-200 text-purple-700 hover:bg-purple-50 shadow-sm"
-                              >
-                                <Edit className="w-4 h-4 sm:mr-0" />
-                                <span className="sm:hidden ml-2">Editar</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDelete(m.id)}
-                                className="border-red-200 text-red-600 hover:bg-red-50 shadow-sm"
-                              >
-                                <Trash2 className="w-4 h-4 sm:mr-0" />
-                                <span className="sm:hidden ml-2">Remover</span>
-                              </Button>
+                            <TableCell className="text-right align-middle">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingMedium(m)
+                                    setIsModalOpen(true)
+                                  }}
+                                  className="border-purple-200 text-purple-700 hover:bg-purple-50 shadow-sm min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px]"
+                                  title="Editar"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDelete(m.id)}
+                                  className="border-red-200 text-red-600 hover:bg-red-50 shadow-sm min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px]"
+                                  title="Remover"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           )}
                         </TableRow>

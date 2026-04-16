@@ -95,7 +95,7 @@ export function AttendanceModal({
             <span className="text-purple-700">Lista: {list.name}</span>
           </div>
 
-          <ScrollArea className="h-[400px] pr-4">
+          <ScrollArea className="h-[400px] pr-2 sm:pr-4">
             <div className="space-y-3">
               {expectedMediuns.map((m) => (
                 <div
@@ -138,22 +138,22 @@ export function AttendanceModal({
           </ScrollArea>
         </div>
 
-        <DialogFooter className="sm:justify-between border-t border-purple-100 pt-4 mt-auto">
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 sm:gap-0 border-t border-purple-100 pt-4 mt-auto">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             {isClosed ? 'Fechar' : 'Cancelar'}
           </Button>
           {!isClosed && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button
                 variant="secondary"
                 onClick={() => handleSave(false)}
-                className="bg-purple-100 hover:bg-purple-200 text-purple-700"
+                className="w-full sm:w-auto bg-purple-100 hover:bg-purple-200 text-purple-700"
               >
                 Salvar Presença
               </Button>
               <Button
                 onClick={() => handleSave(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
               >
                 Fechar Evento
               </Button>
@@ -166,7 +166,7 @@ export function AttendanceModal({
                 onSave(event.id, attendance, false, true)
                 onClose()
               }}
-              className="border-amber-200 text-amber-700 hover:bg-amber-50"
+              className="w-full sm:w-auto border-amber-200 text-amber-700 hover:bg-amber-50"
             >
               Reabrir Evento
             </Button>

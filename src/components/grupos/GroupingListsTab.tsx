@@ -61,8 +61,8 @@ export function GroupingListsTab({
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
-        <div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
+        <div className="mb-3 sm:mb-0 w-full sm:w-auto">
           <h2 className="text-xl font-bold text-purple-900">Listas de Agrupamento</h2>
           <p className="text-sm text-muted-foreground">
             Organize seus médiuns em linhas de trabalho.
@@ -71,7 +71,7 @@ export function GroupingListsTab({
         {canManage && (
           <Button
             onClick={() => openModal()}
-            className="bg-purple-600 hover:bg-purple-700 shadow-md"
+            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 shadow-md"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nova Lista
@@ -92,22 +92,22 @@ export function GroupingListsTab({
               </CardDescription>
             </CardHeader>
             {canManage && (
-              <CardContent className="flex justify-end gap-2 pt-3">
+              <CardContent className="flex flex-col sm:flex-row justify-end gap-2 pt-3">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => openModal(list)}
-                  className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                  className="w-full sm:w-auto border-purple-200 text-purple-700 hover:bg-purple-50"
                 >
-                  <Edit className="w-4 h-4 mr-1" /> Editar
+                  <Edit className="w-4 h-4 mr-2 sm:mr-1" /> Editar
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => deleteList(list.id)}
-                  className="border-red-200 text-red-600 hover:bg-red-50"
+                  className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50"
                 >
-                  <Trash2 className="w-4 h-4 mr-1" /> Remover
+                  <Trash2 className="w-4 h-4 mr-2 sm:mr-1" /> Remover
                 </Button>
               </CardContent>
             )}
@@ -182,11 +182,14 @@ export function GroupingListsTab({
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 mt-4">
+            <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700 text-white">
+            <Button
+              onClick={handleSave}
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
+            >
               Salvar
             </Button>
           </DialogFooter>

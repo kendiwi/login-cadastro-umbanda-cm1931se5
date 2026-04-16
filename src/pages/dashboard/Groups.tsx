@@ -86,27 +86,29 @@ export default function Groups() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-serif font-bold text-purple-900">Meus Grupos</h1>
-          <p className="text-slate-600 mt-2">
+          <p className="text-slate-600 mt-2 text-sm sm:text-base">
             Gerencie as comunidades religiosas das quais você participa.
           </p>
         </div>
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-purple-900 hover:bg-purple-800 text-white font-medium">
+            <Button className="w-full sm:w-auto bg-purple-900 hover:bg-purple-800 text-white font-medium">
               <PlusCircle className="w-5 h-5 mr-2" />
               Criar Novo Grupo
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] border-purple-200">
+          <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] border-purple-200 rounded-xl">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-serif text-purple-900">Novo Grupo</DialogTitle>
+              <DialogTitle className="text-xl sm:text-2xl font-serif text-purple-900">
+                Novo Grupo
+              </DialogTitle>
               <DialogDescription className="text-slate-600">
                 Preencha os detalhes para fundar um novo terreiro ou grupo de estudos.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateGroup}>
-              <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-1 gap-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-purple-900 font-medium">
                     Nome do Grupo
@@ -165,18 +167,18 @@ export default function Groups() {
                   )}
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 mt-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsModalOpen(false)}
-                  className="border-purple-200 text-purple-900 hover:bg-purple-50"
+                  className="w-full sm:w-auto border-purple-200 text-purple-900 hover:bg-purple-50"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-yellow-500 hover:bg-yellow-600 text-purple-950 font-semibold"
+                  className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-purple-950 font-semibold"
                 >
                   Salvar Grupo
                 </Button>
