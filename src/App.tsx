@@ -3,8 +3,22 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/hooks/use-auth'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import Index from './pages/Index'
 import DashboardLayout from './pages/dashboard/DashboardLayout'
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth()
+  if (loading)
+    return (
+      <div className="h-screen w-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    )
+  if (!user) return <Navigate to="/" replace />
+  return <>{children}</>
+}
 import DashboardHome from './pages/dashboard/Home'
 import Groups from './pages/dashboard/Groups'
 import GroupDetails from './pages/dashboard/GroupDetails'
@@ -23,7 +37,14 @@ const App = () => (
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<DashboardHome />} />
               <Route path="grupos" element={<Groups />} />
               <Route path="grupos/:id" element={<GroupDetails />} />

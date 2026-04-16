@@ -76,22 +76,30 @@ export default function GroupDetails() {
 
   const isOwner = role === 'owner'
 
-  const handleSave = (data: Omit<Medium, 'id' | 'grupo_id'>) => {
-    if (editingMedium) {
-      updateMedium(editingMedium.id, data)
-      toast({ title: 'Sucesso', description: 'Médium atualizado com sucesso!' })
-    } else {
-      addMedium(data)
-      toast({ title: 'Sucesso', description: 'Médium adicionado com sucesso!' })
+  const handleSave = async (data: Omit<Medium, 'id' | 'grupo_id'>) => {
+    try {
+      if (editingMedium) {
+        await updateMedium(editingMedium.id, data)
+        toast({ title: 'Sucesso', description: 'Médium atualizado com sucesso!' })
+      } else {
+        await addMedium(data)
+        toast({ title: 'Sucesso', description: 'Médium adicionado com sucesso!' })
+      }
+      setIsModalOpen(false)
+      setEditingMedium(null)
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Falha ao salvar médium.' })
     }
-    setIsModalOpen(false)
-    setEditingMedium(null)
   }
 
-  const handleDelete = (mediumId: string) => {
+  const handleDelete = async (mediumId: string) => {
     if (confirm('Tem certeza que deseja remover este médium do registro?')) {
-      deleteMedium(mediumId)
-      toast({ title: 'Removido', description: 'Médium deletado com sucesso!' })
+      try {
+        await deleteMedium(mediumId)
+        toast({ title: 'Removido', description: 'Médium deletado com sucesso!' })
+      } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Falha ao deletar médium.' })
+      }
     }
   }
 

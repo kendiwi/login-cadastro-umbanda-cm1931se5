@@ -76,15 +76,19 @@ export function EventsTab({
     setIsOpen(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!date || !time || !location || !listId) return
     const eventData = { date, time, location, description, listId, status }
-    if (editingEvent) {
-      updateEvent(editingEvent.id, eventData)
-    } else {
-      addEvent(eventData)
+    try {
+      if (editingEvent) {
+        await updateEvent(editingEvent.id, eventData)
+      } else {
+        await addEvent(eventData)
+      }
+      setIsOpen(false)
+    } catch (error) {
+      console.error(error)
     }
-    setIsOpen(false)
   }
 
   const getExpectedCount = (id: string) => {
@@ -92,7 +96,7 @@ export function EventsTab({
     return list ? list.mediumIds.length : 'Lista removida'
   }
 
-  const handleSaveAttendance = (
+  const handleSaveAttendance = async (
     eventId: string,
     attendance: Record<string, boolean>,
     closeEvent: boolean,
@@ -104,7 +108,11 @@ export function EventsTab({
       : eventToUpdate.status === 'planejado'
         ? 'em andamento'
         : eventToUpdate.status
-    updateEvent(eventId, { attendance, status: newStatus as any })
+    try {
+      await updateEvent(eventId, { attendance, status: newStatus as any })
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   return (

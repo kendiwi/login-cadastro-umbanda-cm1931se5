@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import pb from '@/lib/pocketbase/client'
+import useRealtime from '@/hooks/use-realtime'
 
 export interface GiraEvent {
   id: string
@@ -15,33 +17,114 @@ export interface GiraEvent {
 export function useEvents(groupId: string) {
   const [events, setEvents] = useState<GiraEvent[]>([])
 
-  useEffect(() => {
-    const data = localStorage.getItem(`umbanda_group_events_${groupId}`)
-    if (data) {
-      setEvents(JSON.parse(data))
+  const load = useCallback(async () => {
+    if (!groupId) return
+    try {
+      const [eventRecords, presencaRecords] = await Promise.all([
+        pb.collection('eventos_gira').getFullList({
+          filter: `grupo_id = "${groupId}"`,
+        }),
+        pb.collection('presenca').getFullList({
+          filter: `evento_id.grupo_id = "${groupId}"`,
+        }),
+      ])
+
+      const eventsData = eventRecords.map((e: any) => {
+        const attendance: Record<string, boolean> = {}
+        presencaRecords
+          .filter((p: any) => p.evento_id === e.id)
+          .forEach((p: any) => {
+            attendance[p.medium_id] = p.presente
+          })
+
+        return {
+          id: e.id,
+          groupId: e.grupo_id,
+          date: e.data ? e.data.split(' ')[0] : '',
+          time: e.hora,
+          location: e.local,
+          description: e.descricao || '',
+          listId: e.lista_id,
+          status: e.status,
+          attendance,
+        }
+      })
+      setEvents(eventsData)
+    } catch (error) {
+      console.error('Failed to load events', error)
+      setEvents([])
     }
   }, [groupId])
 
-  const saveEvents = (newEvents: GiraEvent[]) => {
-    setEvents(newEvents)
-    localStorage.setItem(`umbanda_group_events_${groupId}`, JSON.stringify(newEvents))
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useRealtime('eventos_gira', () => {
+    load()
+  })
+  useRealtime('presenca', () => {
+    load()
+  })
+
+  const addEvent = async (event: Omit<GiraEvent, 'id' | 'groupId'>) => {
+    await pb.collection('eventos_gira').create({
+      grupo_id: groupId,
+      lista_id: event.listId,
+      data: event.date ? event.date + ' 12:00:00.000Z' : null,
+      hora: event.time,
+      local: event.location,
+      descricao: event.description,
+      status: event.status,
+    })
   }
 
-  const addEvent = (event: Omit<GiraEvent, 'id' | 'groupId'>) => {
-    const newEvent: GiraEvent = {
-      ...event,
-      id: crypto.randomUUID(),
-      groupId,
+  const updateEvent = async (id: string, event: Partial<GiraEvent>) => {
+    if (
+      event.status ||
+      event.date ||
+      event.time ||
+      event.location ||
+      event.description ||
+      event.listId
+    ) {
+      const data: any = {}
+      if (event.date) data.data = event.date + ' 12:00:00.000Z'
+      if (event.time) data.hora = event.time
+      if (event.location) data.local = event.location
+      if (event.description !== undefined) data.descricao = event.description
+      if (event.listId) data.lista_id = event.listId
+      if (event.status) data.status = event.status
+
+      if (Object.keys(data).length > 0) {
+        await pb.collection('eventos_gira').update(id, data)
+      }
     }
-    saveEvents([...events, newEvent])
+
+    if (event.attendance) {
+      const existing = await pb.collection('presenca').getFullList({
+        filter: `evento_id = "${id}"`,
+      })
+
+      for (const [mId, presente] of Object.entries(event.attendance)) {
+        const p = existing.find((x: any) => x.medium_id === mId)
+        if (p) {
+          if (p.presente !== presente) {
+            await pb.collection('presenca').update(p.id, { presente })
+          }
+        } else {
+          await pb.collection('presenca').create({
+            evento_id: id,
+            medium_id: mId,
+            presente,
+          })
+        }
+      }
+    }
   }
 
-  const updateEvent = (id: string, event: Partial<GiraEvent>) => {
-    saveEvents(events.map((e) => (e.id === id ? { ...e, ...event } : e)))
-  }
-
-  const deleteEvent = (id: string) => {
-    saveEvents(events.filter((e) => e.id !== id))
+  const deleteEvent = async (id: string) => {
+    await pb.collection('eventos_gira').delete(id)
   }
 
   return { events, addEvent, updateEvent, deleteEvent }

@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
+import pb from '@/lib/pocketbase/client'
+import useRealtime from '@/hooks/use-realtime'
 
 export interface Medium {
   id: string
@@ -12,11 +14,22 @@ export interface Medium {
 export function useMediuns(grupoId: string) {
   const [mediuns, setMediuns] = useState<Medium[]>([])
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
+    if (!grupoId) return
     try {
-      const data = localStorage.getItem('mediuns_db')
-      const all: Medium[] = data ? JSON.parse(data) : []
-      setMediuns(all.filter((m) => m.grupo_id === grupoId))
+      const records = await pb.collection('mediuns').getFullList({
+        filter: `grupo_id = "${grupoId}"`,
+      })
+      setMediuns(
+        records.map((r: any) => ({
+          id: r.id,
+          grupo_id: r.grupo_id,
+          nome: r.nome,
+          data_nascimento: r.data_nascimento ? r.data_nascimento.split(' ')[0] : '',
+          contato: r.contato || '',
+          foto: r.foto ? pb.files.getURL(r, r.foto) : '',
+        })),
+      )
     } catch (error) {
       console.error('Failed to load mediuns', error)
       setMediuns([])
@@ -27,37 +40,52 @@ export function useMediuns(grupoId: string) {
     load()
   }, [load])
 
-  const addMedium = (medium: Omit<Medium, 'id' | 'grupo_id'>) => {
-    const data = localStorage.getItem('mediuns_db')
-    const all: Medium[] = data ? JSON.parse(data) : []
-    const newId =
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : Math.random().toString(36).substring(2, 15)
-
-    const newMedium: Medium = { ...medium, id: newId, grupo_id: grupoId }
-    all.push(newMedium)
-    localStorage.setItem('mediuns_db', JSON.stringify(all))
+  useRealtime('mediuns', () => {
     load()
-  }
+  })
 
-  const updateMedium = (id: string, medium: Partial<Medium>) => {
-    const data = localStorage.getItem('mediuns_db')
-    const all: Medium[] = data ? JSON.parse(data) : []
-    const index = all.findIndex((m) => m.id === id)
-    if (index !== -1) {
-      all[index] = { ...all[index], ...medium }
-      localStorage.setItem('mediuns_db', JSON.stringify(all))
-      load()
+  const addMedium = async (medium: Omit<Medium, 'id' | 'grupo_id'>) => {
+    const formData = new FormData()
+    formData.append('grupo_id', grupoId)
+    formData.append('nome', medium.nome)
+    if (medium.data_nascimento) {
+      formData.append('data_nascimento', medium.data_nascimento + ' 12:00:00.000Z')
     }
+    formData.append('contato', medium.contato || '')
+
+    if (medium.foto && medium.foto.startsWith('data:image')) {
+      const res = await fetch(medium.foto)
+      const blob = await res.blob()
+      formData.append('foto', blob, 'foto.jpg')
+    }
+
+    await pb.collection('mediuns').create(formData)
   }
 
-  const deleteMedium = (id: string) => {
-    const data = localStorage.getItem('mediuns_db')
-    const all: Medium[] = data ? JSON.parse(data) : []
-    const filtered = all.filter((m) => m.id !== id)
-    localStorage.setItem('mediuns_db', JSON.stringify(filtered))
-    load()
+  const updateMedium = async (id: string, medium: Partial<Medium>) => {
+    const formData = new FormData()
+    if (medium.nome !== undefined) formData.append('nome', medium.nome)
+    if (medium.data_nascimento !== undefined) {
+      formData.append(
+        'data_nascimento',
+        medium.data_nascimento ? medium.data_nascimento + ' 12:00:00.000Z' : '',
+      )
+    }
+    if (medium.contato !== undefined) formData.append('contato', medium.contato || '')
+
+    if (medium.foto && medium.foto.startsWith('data:image')) {
+      const res = await fetch(medium.foto)
+      const blob = await res.blob()
+      formData.append('foto', blob, 'foto.jpg')
+    } else if (medium.foto === '') {
+      formData.append('foto', '')
+    }
+
+    await pb.collection('mediuns').update(id, formData)
+  }
+
+  const deleteMedium = async (id: string) => {
+    await pb.collection('mediuns').delete(id)
   }
 
   return { mediuns, addMedium, updateMedium, deleteMedium, refresh: load }

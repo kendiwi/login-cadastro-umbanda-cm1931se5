@@ -45,14 +45,18 @@ export function GroupingListsTab({
     setIsOpen(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name) return
-    if (editingList) {
-      updateList(editingList.id, { name, mediumIds: selectedMediums })
-    } else {
-      addList({ name, mediumIds: selectedMediums })
+    try {
+      if (editingList) {
+        await updateList(editingList.id, { name, mediumIds: selectedMediums })
+      } else {
+        await addList({ name, mediumIds: selectedMediums })
+      }
+      setIsOpen(false)
+    } catch (error) {
+      console.error(error)
     }
-    setIsOpen(false)
   }
 
   return (
