@@ -35,4 +35,4 @@ export const createSolicitacao = (data: {
 }) => pb.collection('solicitacoes_acesso').create<SolicitacaoAcesso>(data)
 
 export const updateSolicitacao = (id: string, data: { status: 'aprovado' | 'negado' }) =>
-  pb.collection('solicitacoes_acesso').update<SolicitacaoAcesso>(id, data)
+  pb.collection('solicitacoes_acesso'

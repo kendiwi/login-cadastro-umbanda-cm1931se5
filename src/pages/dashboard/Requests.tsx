@@ -177,11 +177,4 @@ export default function Requests() {
                     )
                   })}
                 </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+              
