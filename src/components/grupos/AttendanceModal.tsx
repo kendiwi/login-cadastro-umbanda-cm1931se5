@@ -22,7 +22,13 @@ interface AttendanceModalProps {
   event: GiraEvent | null
   list: GroupingList | null
   mediuns: Medium[]
-  onSave: (eventId: string, attendance: Record<string, boolean>, closeEvent: boolean) => void
+  isOwner: boolean
+  onSave: (
+    eventId: string,
+    attendance: Record<string, boolean>,
+    closeEvent: boolean,
+    reopenEvent?: boolean,
+  ) => void
 }
 
 export function AttendanceModal({
@@ -31,6 +37,7 @@ export function AttendanceModal({
   event,
   list,
   mediuns,
+  isOwner,
   onSave,
 }: AttendanceModalProps) {
   const [attendance, setAttendance] = useState<Record<string, boolean>>({})
@@ -151,6 +158,18 @@ export function AttendanceModal({
                 Fechar Evento
               </Button>
             </div>
+          )}
+          {isClosed && isOwner && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                onSave(event.id, attendance, false, true)
+                onClose()
+              }}
+              className="border-amber-200 text-amber-700 hover:bg-amber-50"
+            >
+              Reabrir Evento
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

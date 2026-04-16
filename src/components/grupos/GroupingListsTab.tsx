@@ -18,11 +18,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 
 export function GroupingListsTab({
   groupId,
-  isOwner,
+  canManage,
   mediuns,
 }: {
   groupId: string
-  isOwner: boolean
+  canManage: boolean
   mediuns: Medium[]
 }) {
   const { lists, addList, updateList, deleteList } = useGroupingLists(groupId)
@@ -68,7 +68,7 @@ export function GroupingListsTab({
             Organize seus médiuns em linhas de trabalho.
           </p>
         </div>
-        {isOwner && (
+        {canManage && (
           <Button
             onClick={() => openModal()}
             className="bg-purple-600 hover:bg-purple-700 shadow-md"
@@ -91,7 +91,7 @@ export function GroupingListsTab({
                 {list.mediumIds.length} {list.mediumIds.length === 1 ? 'médium' : 'médiuns'}
               </CardDescription>
             </CardHeader>
-            {isOwner && (
+            {canManage && (
               <CardContent className="flex justify-end gap-2 pt-3">
                 <Button
                   variant="outline"
@@ -119,7 +119,7 @@ export function GroupingListsTab({
               <Users className="w-8 h-8 text-purple-300" />
             </div>
             <p className="font-medium text-purple-900">Nenhuma lista criada ainda.</p>
-            {isOwner && (
+            {canManage && (
               <p className="text-sm mt-1">
                 Clique em "Nova Lista" para começar a organizar seus médiuns.
               </p>

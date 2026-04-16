@@ -76,6 +76,7 @@ export default function GroupDetails() {
   if (!grupo) return null
 
   const isOwner = role === 'owner'
+  const canManage = role === 'owner' || role === 'membro'
 
   const handleSave = async (data: Omit<Medium, 'id' | 'grupo_id'>) => {
     try {
@@ -173,7 +174,7 @@ export default function GroupDetails() {
                   </CardDescription>
                 </div>
               </div>
-              {isOwner && (
+              {canManage && (
                 <Button
                   onClick={() => {
                     setEditingMedium(null)
@@ -196,7 +197,7 @@ export default function GroupDetails() {
                     Nenhum médium cadastrado
                   </h3>
                   <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-                    {isOwner
+                    {canManage
                       ? 'Clique no botão acima para adicionar o primeiro médium e começar a montar o registro do grupo.'
                       : 'Este grupo ainda não possui médiuns registrados no sistema.'}
                   </p>
@@ -214,7 +215,7 @@ export default function GroupDetails() {
                           Data de Nascimento
                         </TableHead>
                         <TableHead className="font-semibold text-purple-900">Contato</TableHead>
-                        {isOwner && (
+                        {canManage && (
                           <TableHead className="text-right font-semibold text-purple-900">
                             Ações
                           </TableHead>
@@ -253,7 +254,7 @@ export default function GroupDetails() {
                           <TableCell className="hidden sm:table-cell text-sm align-middle text-muted-foreground">
                             {m.contato || '-'}
                           </TableCell>
-                          {isOwner && (
+                          {canManage && (
                             <TableCell className="flex justify-center sm:table-cell sm:text-right mt-4 sm:mt-0 space-x-2 align-middle">
                               <Button
                                 variant="outline"
@@ -295,10 +296,10 @@ export default function GroupDetails() {
           />
         </TabsContent>
         <TabsContent value="listas">
-          <GroupingListsTab groupId={id!} isOwner={isOwner} mediuns={mediuns} />
+          <GroupingListsTab groupId={id!} canManage={canManage} mediuns={mediuns} />
         </TabsContent>
         <TabsContent value="eventos">
-          <EventsTab groupId={id!} isOwner={isOwner} mediuns={mediuns} />
+          <EventsTab groupId={id!} canManage={canManage} isOwner={isOwner} mediuns={mediuns} />
         </TabsContent>
         <TabsContent value="relatorios">
           <RelatoriosTab groupId={id!} mediuns={mediuns} />

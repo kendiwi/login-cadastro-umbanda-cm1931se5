@@ -34,10 +34,12 @@ import { Badge } from '@/components/ui/badge'
 
 export function EventsTab({
   groupId,
+  canManage,
   isOwner,
   mediuns,
 }: {
   groupId: string
+  canManage: boolean
   isOwner: boolean
   mediuns: Medium[]
 }) {
@@ -100,14 +102,15 @@ export function EventsTab({
     eventId: string,
     attendance: Record<string, boolean>,
     closeEvent: boolean,
+    reopenEvent?: boolean,
   ) => {
     const eventToUpdate = events.find((e) => e.id === eventId)
     if (!eventToUpdate) return
-    const newStatus = closeEvent
-      ? 'fechado'
-      : eventToUpdate.status === 'planejado'
-        ? 'em andamento'
-        : eventToUpdate.status
+    let newStatus = eventToUpdate.status
+    if (closeEvent) newStatus = 'fechado'
+    else if (reopenEvent) newStatus = 'em andamento'
+    else if (eventToUpdate.status === 'planejado') newStatus = 'em andamento'
+
     try {
       await updateEvent(eventId, { attendance, status: newStatus as any })
     } catch (error) {
@@ -124,7 +127,7 @@ export function EventsTab({
             Agende e gerencie os trabalhos do terreiro.
           </p>
         </div>
-        {isOwner && (
+        {canManage && (
           <Button
             onClick={() => openModal()}
             className="bg-purple-600 hover:bg-purple-700 shadow-md"
@@ -145,7 +148,7 @@ export function EventsTab({
                 Médiuns Esperados
               </TableHead>
               <TableHead className="font-semibold text-purple-900">Status</TableHead>
-              {isOwner && (
+              {canManage && (
                 <TableHead className="text-right font-semibold text-purple-900">Ações</TableHead>
               )}
             </TableRow>
@@ -180,7 +183,7 @@ export function EventsTab({
                     {ev.status}
                   </Badge>
                 </TableCell>
-                {isOwner && (
+                {canManage && (
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
@@ -215,7 +218,7 @@ export function EventsTab({
             ))}
             {events.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isOwner ? 5 : 4} className="text-center py-12">
+                <TableCell colSpan={canManage ? 5 : 4} className="text-center py-12">
                   <div className="flex flex-col items-center justify-center text-muted-foreground">
                     <Calendar className="w-10 h-10 mb-2 text-purple-200" />
                     <p>Nenhum evento agendado.</p>
@@ -286,7 +289,11 @@ export function EventsTab({
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={(val: any) => setStatus(val)}>
+              <Select
+                value={status}
+                onValueChange={(val: any) => setStatus(val)}
+                disabled={editingEvent?.status === 'fechado' && !isOwner}
+              >
                 <SelectTrigger id="status">
                   <SelectValue />
                 </SelectTrigger>
@@ -329,6 +336,7 @@ export function EventsTab({
         event={attendanceEvent}
         list={attendanceEvent ? lists.find((l) => l.id === attendanceEvent.listId) || null : null}
         mediuns={mediuns}
+        isOwner={isOwner}
         onSave={handleSaveAttendance}
       />
     </div>
