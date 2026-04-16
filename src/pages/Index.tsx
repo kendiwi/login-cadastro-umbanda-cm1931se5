@@ -57,4 +57,6 @@ export default function Index() {
           </Tabs>
         </CardContent>
       </Card>
-   
+    </div>
+  )
+}
