@@ -118,11 +118,46 @@ export default function DashboardLayout() {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="bg-slate-50 flex-1 flex flex-col min-h-screen">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-purple-200 bg-white/80 backdrop-blur-md sticky top-0 z-50 px-4">
-          <SidebarTrigger className="-ml-1 text-purple-900 hover:text-purple-700 hover:bg-purple-100" />
+      <SidebarInset className="bg-slate-50 flex-1 flex flex-col min-h-[100dvh]">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-purple-200 bg-white/80 backdrop-blur-md sticky top-0 z-50 px-4 md:px-8">
+          <div className="flex items-center gap-1 md:hidden">
+            <SidebarTrigger className="-ml-2 text-purple-900 hover:text-purple-700 hover:bg-purple-100 min-h-[44px] min-w-[44px]" />
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-1 sm:gap-2 font-serif text-lg sm:text-xl font-bold text-purple-900 z-50"
+            >
+              <Sun className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 shrink-0" />
+              <span className="truncate">Axé Portal</span>
+            </Link>
+          </div>
+
+          <div className="hidden md:flex items-center gap-2">
+            <SidebarTrigger className="-ml-1 text-purple-900 hover:text-purple-700 hover:bg-purple-100 min-h-[44px] min-w-[44px] z-50" />
+          </div>
+
+          <div className="flex-1" />
+
+          {/* User Profile / Action Buttons */}
+          <div className="flex items-center gap-1 sm:gap-2 z-50">
+            <button
+              onClick={handleSignOut}
+              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors rounded-md min-h-[44px] min-w-[44px] flex items-center justify-center md:hidden"
+              aria-label="Sair"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+            <div className="hidden md:flex items-center gap-4">
+              <Link
+                to="/dashboard/perfil"
+                className="text-sm font-medium text-slate-600 hover:text-purple-900 transition-colors flex items-center gap-2 min-h-[44px] z-50"
+              >
+                <User className="w-4 h-4" />
+                Meu Perfil
+              </Link>
+            </div>
+          </div>
         </header>
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto w-full max-w-full">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 w-full max-w-full">
           <Outlet />
         </main>
       </SidebarInset>
