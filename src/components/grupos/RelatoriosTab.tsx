@@ -29,8 +29,11 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
         let presencas = 0
 
         closedEvents.forEach((ev) => {
+          const isGlobalEvent = !ev.listId
           const list = lists.find((l) => l.id === ev.listId)
-          if (list && list.mediumIds.includes(medium.id)) {
+          const isInList = list ? list.mediumIds.includes(medium.id) : false
+
+          if (isGlobalEvent || isInList) {
             totalEvents++
             if (ev.attendance?.[medium.id]) {
               presencas++
@@ -53,21 +56,29 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
   }, [mediuns, closedEvents, lists])
 
   const topPresentes = useMemo(() => {
-    return mediumStats.filter((m) => m.totalEvents > 0).slice(0, 3)
+    return [...mediumStats]
+      .filter((m) => m.totalEvents > 0)
+      .sort((a, b) => b.percentual - a.percentual || b.presencas - a.presencas)
+      .slice(0, 3)
   }, [mediumStats])
 
   const topFaltantes = useMemo(() => {
     return [...mediumStats]
       .filter((m) => m.totalEvents > 0)
-      .sort((a, b) => b.faltas - a.faltas || a.percentual - b.percentual)
+      .sort((a, b) => a.percentual - b.percentual || b.faltas - a.faltas)
       .slice(0, 3)
   }, [mediumStats])
 
   const eventStats = useMemo(() => {
     return closedEvents
       .map((ev) => {
+        const isGlobalEvent = !ev.listId
         const list = lists.find((l) => l.id === ev.listId)
-        const expectedMediuns = list ? list.mediumIds : []
+        const expectedMediuns = isGlobalEvent
+          ? mediuns.map((m) => m.id)
+          : list
+            ? list.mediumIds
+            : []
         const totalEsperados = expectedMediuns.length
 
         let presentes = 0
@@ -87,7 +98,7 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
         }
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [closedEvents, lists])
+  }, [closedEvents, lists, mediuns])
 
   return (
     <div className="space-y-6 animate-fade-in">
