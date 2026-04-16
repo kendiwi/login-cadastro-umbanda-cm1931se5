@@ -12,6 +12,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from '@/components/ui/drawer'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -59,6 +67,7 @@ export function EventsTab({
   const [listId, setListId] = useState('')
   const [listType, setListType] = useState<'specific' | 'all'>('all')
   const [status, setStatus] = useState<'planejado' | 'em andamento' | 'fechado'>('planejado')
+  const isMobile = useIsMobile()
 
   const openModal = (ev?: GiraEvent) => {
     if (ev) {
@@ -134,6 +143,110 @@ export function EventsTab({
       console.error(error)
     }
   }
+
+  const formContent = (
+    <div className="grid gap-4 py-4 px-4 sm:px-0 overflow-y-auto min-h-0 flex-1">
+      <div className="space-y-2">
+        <Label htmlFor="name">Nome do Evento</Label>
+        <Input
+          id="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Festa de Iemanjá, Gira de Caboclos..."
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="date">Data</Label>
+          <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="time">Hora</Label>
+          <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="location">Local</Label>
+        <Input
+          id="location"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="Terreiro, Praia, Cachoeira..."
+        />
+      </div>
+      <div className="space-y-3">
+        <Label>Participantes</Label>
+        <RadioGroup
+          value={listType}
+          onValueChange={(val: any) => setListType(val)}
+          className="flex flex-col sm:flex-row gap-4"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="all" id="r-all" />
+            <Label htmlFor="r-all" className="cursor-pointer font-normal">
+              Todos os Médiuns
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="specific" id="r-specific" />
+            <Label htmlFor="r-specific" className="cursor-pointer font-normal">
+              Lista Específica
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      {listType === 'specific' && (
+        <div className="space-y-2 animate-fade-in-up">
+          <Label htmlFor="list">Lista de Agrupamento</Label>
+          <Select value={listId} onValueChange={setListId}>
+            <SelectTrigger id="list">
+              <SelectValue placeholder="Selecione uma lista" />
+            </SelectTrigger>
+            <SelectContent>
+              {lists.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.name} ({l.mediumIds.length} médiuns)
+                </SelectItem>
+              ))}
+              {lists.length === 0 && (
+                <SelectItem value="disabled" disabled>
+                  Nenhuma lista disponível
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="space-y-2">
+        <Label htmlFor="status">Status</Label>
+        <Select
+          value={status}
+          onValueChange={(val: any) => setStatus(val)}
+          disabled={editingEvent?.status === 'fechado' && !isOwner}
+        >
+          <SelectTrigger id="status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="planejado">Planejado</SelectItem>
+            <SelectItem value="em andamento">Em Andamento</SelectItem>
+            <SelectItem value="fechado">Fechado</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="description">Descrição</Label>
+        <Textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Detalhes do evento..."
+          className="resize-none"
+        />
+      </div>
+    </div>
+  )
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -273,140 +386,63 @@ export function EventsTab({
         </Table>
       </div>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="text-purple-900">
-              {editingEvent ? 'Editar Evento' : 'Novo Evento'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome do Evento</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Festa de Iemanjá, Gira de Caboclos..."
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Data</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
+      {isMobile ? (
+        <Drawer open={isOpen} onOpenChange={setIsOpen}>
+          <DrawerContent className="max-h-[85vh]">
+            <DrawerHeader className="text-left">
+              <DrawerTitle className="text-purple-900">
+                {editingEvent ? 'Editar Evento' : 'Novo Evento'}
+              </DrawerTitle>
+            </DrawerHeader>
+            {formContent}
+            <DrawerFooter className="pt-2">
+              <div className="flex flex-col gap-2 w-full">
+                <Button
+                  onClick={handleSave}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                  disabled={
+                    !name || !date || !time || !location || (listType === 'specific' && !listId)
+                  }
+                >
+                  Salvar
+                </Button>
+                <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full">
+                  Cancelar
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="time">Hora</Label>
-                <Input
-                  id="time"
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Local</Label>
-              <Input
-                id="location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Terreiro, Praia, Cachoeira..."
-              />
-            </div>
-            <div className="space-y-3">
-              <Label>Participantes</Label>
-              <RadioGroup
-                value={listType}
-                onValueChange={(val: any) => setListType(val)}
-                className="flex flex-col sm:flex-row gap-4"
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-purple-900">
+                {editingEvent ? 'Editar Evento' : 'Novo Evento'}
+              </DialogTitle>
+            </DialogHeader>
+            {formContent}
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+                className="w-full sm:w-auto"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="r-all" />
-                  <Label htmlFor="r-all" className="cursor-pointer font-normal">
-                    Todos os Médiuns
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="specific" id="r-specific" />
-                  <Label htmlFor="r-specific" className="cursor-pointer font-normal">
-                    Lista Específica
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {listType === 'specific' && (
-              <div className="space-y-2 animate-fade-in-up">
-                <Label htmlFor="list">Lista de Agrupamento</Label>
-                <Select value={listId} onValueChange={setListId}>
-                  <SelectTrigger id="list">
-                    <SelectValue placeholder="Selecione uma lista" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lists.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>
-                        {l.name} ({l.mediumIds.length} médiuns)
-                      </SelectItem>
-                    ))}
-                    {lists.length === 0 && (
-                      <SelectItem value="disabled" disabled>
-                        Nenhuma lista disponível
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={status}
-                onValueChange={(val: any) => setStatus(val)}
-                disabled={editingEvent?.status === 'fechado' && !isOwner}
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSave}
+                className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
+                disabled={
+                  !name || !date || !time || !location || (listType === 'specific' && !listId)
+                }
               >
-                <SelectTrigger id="status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planejado">Planejado</SelectItem>
-                  <SelectItem value="em andamento">Em Andamento</SelectItem>
-                  <SelectItem value="fechado">Fechado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detalhes do evento..."
-                className="resize-none"
-              />
-            </div>
-          </div>
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 mt-4">
-            <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto">
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSave}
-              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
-              disabled={
-                !name || !date || !time || !location || (listType === 'specific' && !listId)
-              }
-            >
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <AttendanceModal
         isOpen={!!attendanceEvent}
