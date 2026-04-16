@@ -4,7 +4,12 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/hooks/use-auth'
 import Index from './pages/Index'
-import Dashboard from './pages/Dashboard'
+import DashboardLayout from './pages/dashboard/DashboardLayout'
+import DashboardHome from './pages/dashboard/Home'
+import Groups from './pages/dashboard/Groups'
+import CreateGroup from './pages/dashboard/CreateGroup'
+import Requests from './pages/dashboard/Requests'
+import Profile from './pages/dashboard/Profile'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -17,7 +22,13 @@ const App = () => (
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route index element={<DashboardHome />} />
+              <Route path="grupos" element={<Groups />} />
+              <Route path="criar-grupo" element={<CreateGroup />} />
+              <Route path="solicitacoes" element={<Requests />} />
+              <Route path="perfil" element={<Profile />} />
+            </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
