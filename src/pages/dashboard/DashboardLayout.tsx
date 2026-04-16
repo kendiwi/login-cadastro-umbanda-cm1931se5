@@ -49,7 +49,7 @@ export default function DashboardLayout() {
             className="flex items-center gap-2 px-2 font-serif text-2xl font-bold text-purple-900 hover:opacity-80 transition-opacity"
           >
             <Sun className="w-8 h-8 text-yellow-500" />
-            <span>Axé Portal</span>
+            <span>Presença da Umbanda</span>
           </Link>
         </SidebarHeader>
         <SidebarContent className="pt-4">
@@ -127,7 +127,7 @@ export default function DashboardLayout() {
               className="flex items-center gap-1 sm:gap-2 font-serif text-lg sm:text-xl font-bold text-purple-900 z-50"
             >
               <Sun className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 shrink-0" />
-              <span className="truncate">Axé Portal</span>
+              <span className="truncate">Presença da Umbanda</span>
             </Link>
           </div>
 

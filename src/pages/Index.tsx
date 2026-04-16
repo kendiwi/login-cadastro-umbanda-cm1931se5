@@ -27,7 +27,7 @@ export default function Index() {
           <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4 text-secondary">
             <Sparkles className="w-8 h-8" />
           </div>
-          <CardTitle className="text-3xl font-serif text-primary">Acesso</CardTitle>
+          <CardTitle className="text-3xl font-serif text-primary">Presença da Umbanda</CardTitle>
           <CardDescription className="text-base">
             Entre na sua conta ou cadastre-se para continuar.
           </CardDescription>
