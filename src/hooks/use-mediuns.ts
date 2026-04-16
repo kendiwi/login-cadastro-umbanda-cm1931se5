@@ -9,6 +9,7 @@ export interface Medium {
   data_nascimento: string
   contato: string
   foto: string
+  licenca?: boolean
 }
 
 export function useMediuns(grupoId: string) {
@@ -19,6 +20,7 @@ export function useMediuns(grupoId: string) {
     try {
       const records = await pb.collection('mediuns').getFullList({
         filter: `grupo_id = "${grupoId}"`,
+        sort: 'nome',
       })
       setMediuns(
         records.map((r: any) => ({
@@ -28,6 +30,7 @@ export function useMediuns(grupoId: string) {
           data_nascimento: r.data_nascimento ? r.data_nascimento.split(' ')[0] : '',
           contato: r.contato || '',
           foto: r.foto ? pb.files.getURL(r, r.foto) : '',
+          licenca: r.licenca || false,
         })),
       )
     } catch (error) {
@@ -52,6 +55,9 @@ export function useMediuns(grupoId: string) {
       formData.append('data_nascimento', medium.data_nascimento + ' 12:00:00.000Z')
     }
     formData.append('contato', medium.contato || '')
+    if (medium.licenca !== undefined) {
+      formData.append('licenca', String(medium.licenca))
+    }
 
     if (medium.foto && medium.foto.startsWith('data:image')) {
       const res = await fetch(medium.foto)
@@ -72,6 +78,7 @@ export function useMediuns(grupoId: string) {
       )
     }
     if (medium.contato !== undefined) formData.append('contato', medium.contato || '')
+    if (medium.licenca !== undefined) formData.append('licenca', String(medium.licenca))
 
     if (medium.foto && medium.foto.startsWith('data:image')) {
       const res = await fetch(medium.foto)
