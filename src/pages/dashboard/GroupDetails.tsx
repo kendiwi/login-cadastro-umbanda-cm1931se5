@@ -20,8 +20,9 @@ import {
 } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
-import { ArrowLeft, Edit, Trash2, Plus, Users } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Plus, Users, Settings } from 'lucide-react'
 import { format } from 'date-fns'
+import { ConfiguracoesTab } from '@/components/grupos/ConfiguracoesTab'
 
 export default function GroupDetails() {
   const { id } = useParams<{ id: string }>()
@@ -147,6 +148,14 @@ export default function GroupDetails() {
           >
             Relatórios
           </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger
+              value="configuracoes"
+              className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm"
+            >
+              Configurações
+            </TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="mediuns">
           <Card className="border-t-4 border-t-amber-500 shadow-lg border-purple-100/50 rounded-xl overflow-hidden mt-0">
@@ -294,6 +303,11 @@ export default function GroupDetails() {
         <TabsContent value="relatorios">
           <RelatoriosTab groupId={id!} mediuns={mediuns} />
         </TabsContent>
+        {isOwner && (
+          <TabsContent value="configuracoes">
+            <ConfiguracoesTab grupo={grupo} onUpdate={(updatedGrupo) => setGrupo(updatedGrupo)} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

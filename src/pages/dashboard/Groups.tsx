@@ -20,6 +20,7 @@ import { Users, PlusCircle, Calendar as CalendarIcon, Crown, User as UserIcon } 
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
+import { useNavigate } from 'react-router-dom'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getMembrosByUserId, createMembro, GrupoMembro } from '@/services/membros'
 import { createGrupo } from '@/services/grupos'
@@ -28,6 +29,7 @@ import { toast } from 'sonner'
 
 export default function Groups() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [date, setDate] = useState<Date>()
   const [membros, setMembros] = useState<GrupoMembro[]>([])
@@ -73,6 +75,7 @@ export default function Groups() {
       setDescricao('')
       setDate(undefined)
       toast.success('Grupo criado com sucesso!')
+      navigate(`/dashboard/grupos/${grupo.id}`)
     } catch (err) {
       setFieldErrors(extractFieldErrors(err))
     }
@@ -195,7 +198,8 @@ export default function Groups() {
             return (
               <Card
                 key={membro.id}
-                className="border-purple-200/60 bg-white hover:shadow-lg hover:shadow-purple-900/5 transition-all duration-300"
+                onClick={() => navigate(`/dashboard/grupos/${grupo.id}`)}
+                className="border-purple-200/60 bg-white hover:shadow-lg hover:shadow-purple-900/5 transition-all duration-300 cursor-pointer"
               >
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start mb-2">
