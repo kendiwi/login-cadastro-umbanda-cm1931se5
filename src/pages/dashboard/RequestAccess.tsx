@@ -1,52 +1,68 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, MapPin, Send } from 'lucide-react'
+import { Search, Send } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/hooks/use-auth'
+import { useRealtime } from '@/hooks/use-realtime'
+import { getGrupos, Grupo } from '@/services/grupos'
+import {
+  getMinhasSolicitacoes,
+  createSolicitacao,
+  SolicitacaoAcesso,
+} from '@/services/solicitacoes'
+import { getMembrosByUserId, GrupoMembro } from '@/services/membros'
 
 export default function RequestAccess() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
-  const [requestedIds, setRequestedIds] = useState<number[]>([])
+  const [groups, setGroups] = useState<Grupo[]>([])
+  const [requests, setRequests] = useState<SolicitacaoAcesso[]>([])
+  const [memberships, setMemberships] = useState<GrupoMembro[]>([])
 
-  const allGroups = [
-    {
-      id: 10,
-      name: 'Terreiro de Umbanda Caboclo Sete Flechas',
-      location: 'São Paulo, SP',
-      desc: 'Sessões de cura e desenvolvimento mediúnico.',
-    },
-    {
-      id: 11,
-      name: 'Centro Espírita Fé, Esperança e Caridade',
-      location: 'Rio de Janeiro, RJ',
-      desc: 'Estudos aprofundados e caridade.',
-    },
-    {
-      id: 12,
-      name: 'Tenda de Umbanda Vó Maria',
-      location: 'Belo Horizonte, MG',
-      desc: 'Atendimentos semanais e giras de preto velho.',
-    },
-    {
-      id: 13,
-      name: 'Ilê Axé Orixá Menino',
-      location: 'Salvador, BA',
-      desc: 'Tradições de raiz e respeito aos ancestrais.',
-    },
-  ]
+  const loadData = async () => {
+    if (!user?.id) return
+    try {
+      const [allGroups, myReqs, myMemberships] = await Promise.all([
+        getGrupos(),
+        getMinhasSolicitacoes(user.id),
+        getMembrosByUserId(user.id),
+      ])
+      setGroups(allGroups)
+      setRequests(myReqs)
+      setMemberships(myMemberships)
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
-  const filteredGroups = allGroups.filter(
-    (g) =>
-      g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      g.location.toLowerCase().includes(searchQuery.toLowerCase()),
+  useEffect(() => {
+    loadData()
+  }, [user?.id])
+
+  useRealtime('grupos', () => loadData())
+  useRealtime('solicitacoes_acesso', () => loadData())
+  useRealtime('grupo_membros', () => loadData())
+
+  const filteredGroups = groups.filter((g) =>
+    g.nome.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const handleRequest = (id: number) => {
-    setRequestedIds((prev) => [...prev, id])
-    toast.success('Solicitação de acesso enviada com sucesso!', {
-      description: 'Aguarde a aprovação do dirigente do grupo.',
-    })
+  const handleRequest = async (id: string) => {
+    if (!user?.id) return
+    try {
+      await createSolicitacao({
+        grupo_id: id,
+        user_id: user.id,
+        status: 'pendente',
+      })
+      toast.success('Solicitação de acesso enviada com sucesso!', {
+        description: 'Aguarde a aprovação do dirigente do grupo.',
+      })
+    } catch (err) {
+      toast.error('Erro ao solicitar acesso.')
+    }
   }
 
   return (
@@ -61,7 +77,7 @@ export default function RequestAccess() {
       <div className="relative max-w-xl">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 w-5 h-5" />
         <Input
-          placeholder="Buscar por nome ou cidade..."
+          placeholder="Buscar por nome..."
           className="pl-10 h-12 text-lg border-purple-200 focus-visible:ring-purple-900 shadow-sm"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -74,44 +90,57 @@ export default function RequestAccess() {
             Nenhum grupo encontrado com os termos de busca.
           </div>
         ) : (
-          filteredGroups.map((group) => (
-            <Card
-              key={group.id}
-              className="border-purple-200/60 bg-white hover:border-purple-300 transition-colors"
-            >
-              <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <CardTitle className="text-xl font-serif text-purple-900">{group.name}</CardTitle>
-                  <CardDescription className="text-slate-700">{group.desc}</CardDescription>
-                  <div className="flex items-center text-sm text-slate-500 pt-1">
-                    <MapPin className="w-4 h-4 mr-1 text-yellow-600" />
-                    {group.location}
-                  </div>
-                </div>
+          filteredGroups.map((group) => {
+            const isMember = memberships.some((m) => m.grupo_id === group.id)
+            const pendingRequest = requests.find(
+              (r) => r.grupo_id === group.id && r.status === 'pendente',
+            )
+            const isOwner = group.owner_id === user?.id
 
-                <Button
-                  onClick={() => handleRequest(group.id)}
-                  disabled={requestedIds.includes(group.id)}
-                  className={cn(
-                    'w-full sm:w-auto',
-                    requestedIds.includes(group.id)
-                      ? 'bg-slate-100 text-slate-500 border-slate-200'
-                      : 'bg-purple-100 text-purple-900 hover:bg-purple-200 font-medium border border-purple-200',
-                  )}
-                  variant={requestedIds.includes(group.id) ? 'outline' : 'default'}
-                >
-                  {requestedIds.includes(group.id) ? (
-                    'Solicitação Pendente'
+            return (
+              <Card
+                key={group.id}
+                className="border-purple-200/60 bg-white hover:border-purple-300 transition-colors"
+              >
+                <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <CardTitle className="text-xl font-serif text-purple-900">
+                      {group.nome}
+                    </CardTitle>
+                    <CardDescription className="text-slate-700">
+                      {group.descricao || 'Sem descrição'}
+                    </CardDescription>
+                  </div>
+
+                  {isOwner || isMember ? (
+                    <Button
+                      disabled
+                      variant="outline"
+                      className="w-full sm:w-auto bg-slate-50 text-slate-500 border-slate-200"
+                    >
+                      Você já participa deste grupo
+                    </Button>
+                  ) : pendingRequest ? (
+                    <Button
+                      disabled
+                      variant="outline"
+                      className="w-full sm:w-auto bg-slate-50 text-slate-500 border-slate-200"
+                    >
+                      Solicitação Pendente
+                    </Button>
                   ) : (
-                    <>
+                    <Button
+                      onClick={() => handleRequest(group.id)}
+                      className="w-full sm:w-auto bg-purple-100 text-purple-900 hover:bg-purple-200 font-medium border border-purple-200"
+                    >
                       <Send className="w-4 h-4 mr-2" />
                       Solicitar Acesso
-                    </>
+                    </Button>
                   )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            )
+          })
         )}
       </div>
     </div>

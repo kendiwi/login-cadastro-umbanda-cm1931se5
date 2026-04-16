@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -12,44 +12,62 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Check, X, Users } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/hooks/use-auth'
+import { useRealtime } from '@/hooks/use-realtime'
+import {
+  getSolicitacoesByOwner,
+  updateSolicitacao,
+  SolicitacaoAcesso,
+} from '@/services/solicitacoes'
+import { createMembro } from '@/services/membros'
+import { format } from 'date-fns'
 
 export default function Requests() {
-  const [requests, setRequests] = useState([
-    {
-      id: 1,
-      name: 'João Batista',
-      email: 'joao.batista@email.com',
-      date: '15/05/2026',
-      group: 'Terreiro Luz Divina',
-    },
-    {
-      id: 2,
-      name: 'Mariana Silva',
-      email: 'mariana.s@email.com',
-      date: '14/05/2026',
-      group: 'Terreiro Luz Divina',
-    },
-    {
-      id: 3,
-      name: 'Carlos Eduardo',
-      email: 'cadu.edu@email.com',
-      date: '12/05/2026',
-      group: 'Terreiro Luz Divina',
-    },
-  ])
+  const { user } = useAuth()
+  const [requests, setRequests] = useState<SolicitacaoAcesso[]>([])
 
-  const handleApprove = (id: number, name: string) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id))
-    toast.success('Solicitação Aprovada', {
-      description: `${name} agora é membro do grupo.`,
-    })
+  const loadRequests = async () => {
+    if (!user?.id) return
+    try {
+      const data = await getSolicitacoesByOwner(user.id)
+      setRequests(data)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
-  const handleDeny = (id: number, name: string) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id))
-    toast.error('Solicitação Recusada', {
-      description: `A entrada de ${name} foi negada.`,
-    })
+  useEffect(() => {
+    loadRequests()
+  }, [user?.id])
+
+  useRealtime('solicitacoes_acesso', () => loadRequests())
+
+  const handleApprove = async (
+    reqId: string,
+    grupoId: string,
+    userId: string,
+    userName: string,
+  ) => {
+    try {
+      await updateSolicitacao(reqId, { status: 'aprovado' })
+      await createMembro({ grupo_id: grupoId, user_id: userId, status: 'membro' })
+      toast.success('Solicitação Aprovada', {
+        description: `${userName} agora é membro do grupo.`,
+      })
+    } catch (err) {
+      toast.error('Erro ao aprovar solicitação.')
+    }
+  }
+
+  const handleDeny = async (reqId: string, userName: string) => {
+    try {
+      await updateSolicitacao(reqId, { status: 'negado' })
+      toast.success('Solicitação Recusada', {
+        description: `A entrada de ${userName} foi negada.`,
+      })
+    } catch (err) {
+      toast.error('Erro ao recusar solicitação.')
+    }
   }
 
   return (
@@ -98,45 +116,64 @@ export default function Requests() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.map((req) => (
-                    <TableRow
-                      key={req.id}
-                      className="border-purple-100 hover:bg-purple-50/50 transition-colors"
-                    >
-                      <TableCell className="font-medium text-slate-900">{req.name}</TableCell>
-                      <TableCell className="text-slate-600">{req.email}</TableCell>
-                      <TableCell className="text-slate-600 hidden md:table-cell">
-                        <Badge
-                          variant="outline"
-                          className="border-purple-200 text-purple-700 bg-purple-50"
-                        >
-                          {req.group}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-500">{req.date}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
+                  {requests.map((req) => {
+                    const requester = req.expand?.user_id
+                    const group = req.expand?.grupo_id
+                    if (!requester || !group) return null
+
+                    return (
+                      <TableRow
+                        key={req.id}
+                        className="border-purple-100 hover:bg-purple-50/50 transition-colors"
+                      >
+                        <TableCell className="font-medium text-slate-900">
+                          {requester.name || requester.email}
+                        </TableCell>
+                        <TableCell className="text-slate-600">{requester.email}</TableCell>
+                        <TableCell className="text-slate-600 hidden md:table-cell">
+                          <Badge
                             variant="outline"
-                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                            onClick={() => handleDeny(req.id, req.name)}
+                            className="border-purple-200 text-purple-700 bg-purple-50"
                           >
-                            <X className="w-4 h-4 mr-1 sm:mr-0 lg:mr-1" />
-                            <span className="hidden lg:inline">Negar</span>
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => handleApprove(req.id, req.name)}
-                          >
-                            <Check className="w-4 h-4 mr-1 sm:mr-0 lg:mr-1" />
-                            <span className="hidden lg:inline">Aprovar</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            {group.nome}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-500">
+                          {req.data_solicitacao
+                            ? format(new Date(req.data_solicitacao), 'dd/MM/yyyy')
+                            : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => handleDeny(req.id, requester.name || requester.email)}
+                            >
+                              <X className="w-4 h-4 mr-1 sm:mr-0 lg:mr-1" />
+                              <span className="hidden lg:inline">Negar</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() =>
+                                handleApprove(
+                                  req.id,
+                                  group.id,
+                                  requester.id,
+                                  requester.name || requester.email,
+                                )
+                              }
+                            >
+                              <Check className="w-4 h-4 mr-1 sm:mr-0 lg:mr-1" />
+                              <span className="hidden lg:inline">Aprovar</span>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
