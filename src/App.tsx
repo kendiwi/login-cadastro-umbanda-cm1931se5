@@ -7,6 +7,7 @@ import Index from './pages/Index'
 import DashboardLayout from './pages/dashboard/DashboardLayout'
 import DashboardHome from './pages/dashboard/Home'
 import Groups from './pages/dashboard/Groups'
+import GroupDetails from './pages/dashboard/GroupDetails'
 import RequestAccess from './pages/dashboard/RequestAccess'
 import Requests from './pages/dashboard/Requests'
 import Profile from './pages/dashboard/Profile'
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardHome />} />
               <Route path="grupos" element={<Groups />} />
+              <Route path="grupos/:id" element={<GroupDetails />} />
               <Route path="solicitar-acesso" element={<RequestAccess />} />
               <Route path="solicitacoes" element={<Requests />} />
               <Route path="perfil" element={<Profile />} />
