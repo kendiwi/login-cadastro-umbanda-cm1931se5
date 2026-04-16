@@ -7,6 +7,8 @@ export interface SolicitacaoAcesso {
   user_id: string
   status: 'pendente' | 'aprovado' | 'negado'
   data_solicitacao: string
+  created?: string
+  updated?: string
   expand?: {
     grupo_id?: Grupo
     user_id?: any

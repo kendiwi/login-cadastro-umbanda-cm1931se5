@@ -141,14 +141,15 @@ export default function Requests() {
                         <TableCell className="text-slate-500">
                           {req.data_solicitacao
                             ? format(new Date(req.data_solicitacao), 'dd/MM/yyyy')
-                            : '-'}
+                            : req.created
+                              ? format(new Date(req.created), 'dd/MM/yyyy')
+                              : '-'}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                              variant="destructive"
                               onClick={() => handleDeny(req.id, requester.name || requester.email)}
                             >
                               <X className="w-4 h-4 mr-1 sm:mr-0 lg:mr-1" />
@@ -156,7 +157,8 @@ export default function Requests() {
                             </Button>
                             <Button
                               size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white"
+                              variant="outline"
+                              className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
                               onClick={() =>
                                 handleApprove(
                                   req.id,
