@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GroupingListsTab } from '@/components/grupos/GroupingListsTab'
 import { EventsTab } from '@/components/grupos/EventsTab'
+import { RelatoriosTab } from '@/components/grupos/RelatoriosTab'
 import {
   Table,
   TableBody,
@@ -131,6 +132,12 @@ export default function GroupDetails() {
             className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm"
           >
             Eventos de Gira
+          </TabsTrigger>
+          <TabsTrigger
+            value="relatorios"
+            className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm"
+          >
+            Relatórios
           </TabsTrigger>
         </TabsList>
         <TabsContent value="mediuns">
@@ -274,7 +281,10 @@ export default function GroupDetails() {
           <GroupingListsTab groupId={id!} isOwner={isOwner} mediuns={mediuns} />
         </TabsContent>
         <TabsContent value="eventos">
-          <EventsTab groupId={id!} isOwner={isOwner} />
+          <EventsTab groupId={id!} isOwner={isOwner} mediuns={mediuns} />
+        </TabsContent>
+        <TabsContent value="relatorios">
+          <RelatoriosTab groupId={id!} mediuns={mediuns} />
         </TabsContent>
       </Tabs>
     </div>

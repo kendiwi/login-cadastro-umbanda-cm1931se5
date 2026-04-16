@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Plus, Edit, Trash2, Calendar } from 'lucide-react'
+import { Plus, Edit, Trash2, Calendar, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEvents, GiraEvent } from '@/hooks/use-events'
 import { useGroupingLists } from '@/hooks/use-grouping-lists'
+import { Medium } from '@/hooks/use-mediuns'
+import { AttendanceModal } from './AttendanceModal'
 import {
   Dialog,
   DialogContent,
@@ -30,12 +32,21 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 
-export function EventsTab({ groupId, isOwner }: { groupId: string; isOwner: boolean }) {
+export function EventsTab({
+  groupId,
+  isOwner,
+  mediuns,
+}: {
+  groupId: string
+  isOwner: boolean
+  mediuns: Medium[]
+}) {
   const { events, addEvent, updateEvent, deleteEvent } = useEvents(groupId)
   const { lists } = useGroupingLists(groupId)
 
   const [isOpen, setIsOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<GiraEvent | null>(null)
+  const [attendanceEvent, setAttendanceEvent] = useState<GiraEvent | null>(null)
 
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
@@ -79,6 +90,21 @@ export function EventsTab({ groupId, isOwner }: { groupId: string; isOwner: bool
   const getExpectedCount = (id: string) => {
     const list = lists.find((l) => l.id === id)
     return list ? list.mediumIds.length : 'Lista removida'
+  }
+
+  const handleSaveAttendance = (
+    eventId: string,
+    attendance: Record<string, boolean>,
+    closeEvent: boolean,
+  ) => {
+    const eventToUpdate = events.find((e) => e.id === eventId)
+    if (!eventToUpdate) return
+    const newStatus = closeEvent
+      ? 'fechado'
+      : eventToUpdate.status === 'planejado'
+        ? 'em andamento'
+        : eventToUpdate.status
+    updateEvent(eventId, { attendance, status: newStatus as any })
   }
 
   return (
@@ -151,8 +177,18 @@ export function EventsTab({ groupId, isOwner }: { groupId: string; isOwner: bool
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => setAttendanceEvent(ev)}
+                      className="text-emerald-600 hover:bg-emerald-50 mr-1"
+                      title="Lista de Presença"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => openModal(ev)}
                       className="text-purple-700 hover:bg-purple-50"
+                      title="Editar Evento"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -161,6 +197,7 @@ export function EventsTab({ groupId, isOwner }: { groupId: string; isOwner: bool
                       size="sm"
                       onClick={() => deleteEvent(ev.id)}
                       className="text-red-600 hover:bg-red-50 ml-1"
+                      title="Excluir Evento"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -277,6 +314,15 @@ export function EventsTab({ groupId, isOwner }: { groupId: string; isOwner: bool
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AttendanceModal
+        isOpen={!!attendanceEvent}
+        onClose={() => setAttendanceEvent(null)}
+        event={attendanceEvent}
+        list={attendanceEvent ? lists.find((l) => l.id === attendanceEvent.listId) || null : null}
+        mediuns={mediuns}
+        onSave={handleSaveAttendance}
+      />
     </div>
   )
 }

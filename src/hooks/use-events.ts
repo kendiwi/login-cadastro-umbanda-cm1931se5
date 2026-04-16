@@ -9,6 +9,7 @@ export interface GiraEvent {
   description: string
   listId: string
   status: 'planejado' | 'em andamento' | 'fechado'
+  attendance?: Record<string, boolean>
 }
 
 export function useEvents(groupId: string) {
