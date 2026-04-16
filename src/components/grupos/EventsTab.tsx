@@ -31,6 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
 export function EventsTab({
   groupId,
@@ -55,6 +56,7 @@ export function EventsTab({
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [listId, setListId] = useState('')
+  const [listType, setListType] = useState<'specific' | 'all'>('all')
   const [status, setStatus] = useState<'planejado' | 'em andamento' | 'fechado'>('planejado')
 
   const openModal = (ev?: GiraEvent) => {
@@ -64,7 +66,8 @@ export function EventsTab({
       setTime(ev.time)
       setLocation(ev.location)
       setDescription(ev.description)
-      setListId(ev.listId)
+      setListId(ev.listId || '')
+      setListType(ev.listId ? 'specific' : 'all')
       setStatus(ev.status)
     } else {
       setEditingEvent(null)
@@ -73,14 +76,24 @@ export function EventsTab({
       setLocation('')
       setDescription('')
       setListId('')
+      setListType('all')
       setStatus('planejado')
     }
     setIsOpen(true)
   }
 
   const handleSave = async () => {
-    if (!date || !time || !location || !listId) return
-    const eventData = { date, time, location, description, listId, status }
+    if (!date || !time || !location) return
+    if (listType === 'specific' && !listId) return
+
+    const eventData = {
+      date,
+      time,
+      location,
+      description,
+      listId: listType === 'specific' ? listId : '',
+      status,
+    }
     try {
       if (editingEvent) {
         await updateEvent(editingEvent.id, eventData)
@@ -149,7 +162,7 @@ export function EventsTab({
                 Local
               </TableHead>
               <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell">
-                Médiuns Esperados
+                Participantes
               </TableHead>
               <TableHead className="font-semibold text-purple-900">Status</TableHead>
               {canManage && (
@@ -171,9 +184,31 @@ export function EventsTab({
                 </TableCell>
                 <TableCell className="text-slate-700 hidden md:table-cell">{ev.location}</TableCell>
                 <TableCell className="text-center font-medium text-slate-700 hidden sm:table-cell">
-                  <Badge variant="outline" className="bg-slate-50">
-                    {getExpectedCount(ev.listId)}
-                  </Badge>
+                  {ev.listId ? (
+                    <div className="flex flex-col items-center">
+                      <span
+                        className="text-xs text-slate-500 mb-1 max-w-[120px] truncate"
+                        title={lists.find((l) => l.id === ev.listId)?.name}
+                      >
+                        {lists.find((l) => l.id === ev.listId)?.name || 'Lista removida'}
+                      </span>
+                      <Badge variant="outline" className="bg-slate-50">
+                        {getExpectedCount(ev.listId)} esperados
+                      </Badge>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs font-medium text-purple-700 mb-1">
+                        Todos os Médiuns
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="bg-purple-50 text-purple-700 border-purple-200"
+                      >
+                        {mediuns.length} esperados
+                      </Badge>
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge
@@ -272,26 +307,50 @@ export function EventsTab({
                 placeholder="Terreiro, Praia, Cachoeira..."
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="list">Lista de Agrupamento</Label>
-              <Select value={listId} onValueChange={setListId}>
-                <SelectTrigger id="list">
-                  <SelectValue placeholder="Selecione uma lista" />
-                </SelectTrigger>
-                <SelectContent>
-                  {lists.map((l) => (
-                    <SelectItem key={l.id} value={l.id}>
-                      {l.name} ({l.mediumIds.length} médiuns)
-                    </SelectItem>
-                  ))}
-                  {lists.length === 0 && (
-                    <SelectItem value="disabled" disabled>
-                      Nenhuma lista disponível
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+            <div className="space-y-3">
+              <Label>Participantes</Label>
+              <RadioGroup
+                value={listType}
+                onValueChange={(val: any) => setListType(val)}
+                className="flex flex-col sm:flex-row gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="all" id="r-all" />
+                  <Label htmlFor="r-all" className="cursor-pointer font-normal">
+                    Todos os Médiuns
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="specific" id="r-specific" />
+                  <Label htmlFor="r-specific" className="cursor-pointer font-normal">
+                    Lista Específica
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
+
+            {listType === 'specific' && (
+              <div className="space-y-2 animate-fade-in-up">
+                <Label htmlFor="list">Lista de Agrupamento</Label>
+                <Select value={listId} onValueChange={setListId}>
+                  <SelectTrigger id="list">
+                    <SelectValue placeholder="Selecione uma lista" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lists.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.name} ({l.mediumIds.length} médiuns)
+                      </SelectItem>
+                    ))}
+                    {lists.length === 0 && (
+                      <SelectItem value="disabled" disabled>
+                        Nenhuma lista disponível
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select
@@ -327,7 +386,7 @@ export function EventsTab({
             <Button
               onClick={handleSave}
               className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
-              disabled={!date || !time || !location || !listId}
+              disabled={!date || !time || !location || (listType === 'specific' && !listId)}
             >
               Salvar
             </Button>
@@ -339,7 +398,17 @@ export function EventsTab({
         isOpen={!!attendanceEvent}
         onClose={() => setAttendanceEvent(null)}
         event={attendanceEvent}
-        list={attendanceEvent ? lists.find((l) => l.id === attendanceEvent.listId) || null : null}
+        list={
+          attendanceEvent
+            ? attendanceEvent.listId
+              ? lists.find((l) => l.id === attendanceEvent.listId) || null
+              : ({
+                  id: 'all',
+                  name: 'Todos os Médiuns',
+                  mediumIds: mediuns.map((m) => m.id),
+                } as any)
+            : null
+        }
         mediuns={mediuns}
         isOwner={isOwner}
         onSave={handleSaveAttendance}

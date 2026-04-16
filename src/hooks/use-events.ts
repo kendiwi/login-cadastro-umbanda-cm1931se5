@@ -44,7 +44,7 @@ export function useEvents(groupId: string) {
           time: e.hora,
           location: e.local,
           description: e.descricao || '',
-          listId: e.lista_id,
+          listId: e.lista_id || '',
           status: e.status,
           attendance,
         }
@@ -68,32 +68,52 @@ export function useEvents(groupId: string) {
   })
 
   const addEvent = async (event: Omit<GiraEvent, 'id' | 'groupId'>) => {
-    await pb.collection('eventos_gira').create({
+    const createdEvent = await pb.collection('eventos_gira').create({
       grupo_id: groupId,
-      lista_id: event.listId,
+      lista_id: event.listId || null,
       data: event.date ? event.date + ' 12:00:00.000Z' : null,
       hora: event.time,
       local: event.location,
       descricao: event.description,
       status: event.status,
     })
+
+    if (!event.listId) {
+      try {
+        const allMediuns = await pb.collection('mediuns').getFullList({
+          filter: `grupo_id = "${groupId}"`,
+        })
+
+        await Promise.all(
+          allMediuns.map((m) =>
+            pb.collection('presenca').create({
+              evento_id: createdEvent.id,
+              medium_id: m.id,
+              presente: false,
+            }),
+          ),
+        )
+      } catch (error) {
+        console.error('Failed to create attendance records for all mediums', error)
+      }
+    }
   }
 
   const updateEvent = async (id: string, event: Partial<GiraEvent>) => {
     if (
-      event.status ||
-      event.date ||
-      event.time ||
-      event.location ||
-      event.description ||
-      event.listId
+      event.status !== undefined ||
+      event.date !== undefined ||
+      event.time !== undefined ||
+      event.location !== undefined ||
+      event.description !== undefined ||
+      event.listId !== undefined
     ) {
       const data: any = {}
       if (event.date) data.data = event.date + ' 12:00:00.000Z'
       if (event.time) data.hora = event.time
       if (event.location) data.local = event.location
       if (event.description !== undefined) data.descricao = event.description
-      if (event.listId) data.lista_id = event.listId
+      if (event.listId !== undefined) data.lista_id = event.listId || null
       if (event.status) data.status = event.status
 
       if (Object.keys(data).length > 0) {
