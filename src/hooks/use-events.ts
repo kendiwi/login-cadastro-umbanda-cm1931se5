@@ -153,4 +153,5 @@ export function useEvents(groupId: string) {
     await pb.collection('eventos_gira').delete(id)
   }
 
-  return { events, addEvent, upda
+  return { events, addEvent, updateEvent, deleteEvent }
+}
