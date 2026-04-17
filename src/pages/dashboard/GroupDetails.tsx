@@ -115,14 +115,29 @@ export default function GroupDetails() {
           variant="ghost"
           size="sm"
           onClick={() => navigate('/dashboard/grupos')}
-          className="text-purple-700 hover:text-purple-900 hover:bg-purple-50"
+          className="text-purple-700 hover:text-purple-900 hover:bg-purple-50 shrink-0"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-purple-900">{grupo.nome}</h1>
-          <p className="text-sm text-muted-foreground">{grupo.descricao || 'Sem descrição'}</p>
+        <div className="flex items-center gap-4 ml-2">
+          <Avatar className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-purple-200 shadow-sm shrink-0">
+            <AvatarImage
+              src={grupo.icone ? pb.files.getUrl(grupo, grupo.icone) : undefined}
+              className="object-cover"
+            />
+            <AvatarFallback className="bg-purple-100 text-purple-900 font-bold text-2xl">
+              {grupo.nome?.charAt(0)?.toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-purple-900 leading-tight">
+              {grupo.nome}
+            </h1>
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+              {grupo.descricao || 'Sem descrição'}
+            </p>
+          </div>
         </div>
       </div>
 

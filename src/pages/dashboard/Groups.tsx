@@ -16,6 +16,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import pb from '@/lib/pocketbase/client'
 import { Users, PlusCircle, Calendar as CalendarIcon, Crown, User as UserIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -37,6 +39,7 @@ export default function Groups() {
 
   const [nome, setNome] = useState('')
   const [descricao, setDescricao] = useState('')
+  const [icone, setIcone] = useState<File | null>(null)
 
   const loadGroups = async () => {
     if (!user?.id) return
@@ -59,12 +62,14 @@ export default function Groups() {
     e.preventDefault()
     setFieldErrors({})
     try {
-      const grupo = await createGrupo({
-        nome,
-        descricao,
-        data_fundacao: date?.toISOString(),
-        owner_id: user.id,
-      })
+      const formData = new FormData()
+      formData.append('nome', nome)
+      formData.append('descricao', descricao)
+      if (date) formData.append('data_fundacao', date.toISOString())
+      formData.append('owner_id', user.id)
+      if (icone) formData.append('icone', icone)
+
+      const grupo = await createGrupo(formData)
       await createMembro({
         grupo_id: grupo.id,
         user_id: user.id,
@@ -74,6 +79,7 @@ export default function Groups() {
       setNome('')
       setDescricao('')
       setDate(undefined)
+      setIcone(null)
       toast.success('Grupo criado com sucesso!')
       navigate(`/dashboard/grupos/${grupo.id}`)
     } catch (err) {
@@ -166,6 +172,19 @@ export default function Groups() {
                     <p className="text-sm text-red-500">{fieldErrors.data_fundacao}</p>
                   )}
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="icone" className="text-purple-900 font-medium">
+                    Ícone do Grupo
+                  </Label>
+                  <Input
+                    id="icone"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setIcone(e.target.files?.[0] || null)}
+                    className="border-purple-200 file:text-purple-900 focus-visible:ring-purple-900 cursor-pointer"
+                  />
+                  {fieldErrors.icone && <p className="text-sm text-red-500">{fieldErrors.icone}</p>}
+                </div>
               </div>
               <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 mt-4">
                 <Button
@@ -205,9 +224,15 @@ export default function Groups() {
               >
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start mb-2">
-                    <div className="p-2 bg-purple-100 rounded-lg text-purple-900">
-                      <Users className="w-6 h-6" />
-                    </div>
+                    <Avatar className="w-12 h-12 border-2 border-purple-100 shadow-sm">
+                      <AvatarImage
+                        src={grupo.icone ? pb.files.getUrl(grupo, grupo.icone) : undefined}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-purple-100 text-purple-900 font-bold text-lg">
+                        {grupo.nome?.charAt(0)?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     {membro.status === 'owner' ? (
                       <Badge className="bg-yellow-500 text-purple-950 hover:bg-yellow-600 font-semibold flex items-center gap-1">
                         <Crown className="w-3 h-3" /> Owner

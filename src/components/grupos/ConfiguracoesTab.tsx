@@ -15,6 +15,7 @@ import { updateGrupo, Grupo } from '@/services/grupos'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
 import { toast } from 'sonner'
 import { Settings, Save } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
 
 export function ConfiguracoesTab({
   grupo,
@@ -25,6 +26,7 @@ export function ConfiguracoesTab({
 }) {
   const [nome, setNome] = useState(grupo.nome)
   const [descricao, setDescricao] = useState(grupo.descricao || '')
+  const [icone, setIcone] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
@@ -33,7 +35,12 @@ export function ConfiguracoesTab({
     setLoading(true)
     setFieldErrors({})
     try {
-      const updated = await updateGrupo(grupo.id, { nome, descricao })
+      const formData = new FormData()
+      formData.append('nome', nome)
+      formData.append('descricao', descricao)
+      if (icone) formData.append('icone', icone)
+
+      const updated = await updateGrupo(grupo.id, formData)
       onUpdate(updated)
       toast.success('Configurações do grupo atualizadas com sucesso!')
     } catch (error) {
@@ -94,7 +101,29 @@ export function ConfiguracoesTab({
                 <p className="text-sm text-red-500">{fieldErrors.descricao}</p>
               )}
             </div>
-          </CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="iconeEdit" className="text-purple-900 font-medium">
+                Ícone do Grupo
+              </Label>
+              {grupo.icone && !icone && (
+                <div className="mb-2">
+                  <img
+                    src={pb.files.getUrl(grupo, grupo.icone)}
+                    alt="Ícone atual"
+                    className="w-16 h-16 object-cover rounded-full border-2 border-purple-200 shadow-sm"
+                  />
+                </div>
+              )}
+              <Input
+                id="iconeEdit"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setIcone(e.target.files?.[0] || null)}
+                className="border-purple-200 file:text-purple-900 focus-visible:ring-purple-900 cursor-pointer"
+              />
+              {fieldErrors.icone && <p className="text-sm text-red-500">{fieldErrors.icone}</p>}
+            </div>
+          </CardContent>{' '}
           <CardFooter className="flex flex-col sm:flex-row sm:justify-end border-t border-purple-50 pt-4 bg-slate-50/50 rounded-b-xl">
             <Button
               type="submit"
