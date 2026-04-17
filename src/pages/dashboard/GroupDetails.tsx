@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast'
 import { ArrowLeft, Edit, Trash2, Plus, Users, Settings } from 'lucide-react'
 import { format } from 'date-fns'
 import { ConfiguracoesTab } from '@/components/grupos/ConfiguracoesTab'
+import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 
 export default function GroupDetails() {
   const { id } = useParams<{ id: string }>()
@@ -37,6 +38,7 @@ export default function GroupDetails() {
   const { mediuns, addMedium, updateMedium, deleteMedium } = useMediuns(id!)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingMedium, setEditingMedium] = useState<Medium | null>(null)
+  const [deletingMedium, setDeletingMedium] = useState<Medium | null>(null)
 
   useEffect(() => {
     async function fetchGroup() {
@@ -94,14 +96,15 @@ export default function GroupDetails() {
     }
   }
 
-  const handleDelete = async (mediumId: string) => {
-    if (confirm('Tem certeza que deseja remover este médium do registro?')) {
-      try {
-        await deleteMedium(mediumId)
-        toast({ title: 'Removido', description: 'Médium deletado com sucesso!' })
-      } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Falha ao deletar médium.' })
-      }
+  const confirmDelete = async () => {
+    if (!deletingMedium) return
+    try {
+      await deleteMedium(deletingMedium.id)
+      toast({ title: 'Removido', description: 'Médium deletado com sucesso!' })
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Falha ao deletar médium.' })
+    } finally {
+      setDeletingMedium(null)
     }
   }
 
@@ -269,7 +272,7 @@ export default function GroupDetails() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleDelete(m.id)}
+                                  onClick={() => setDeletingMedium(m)}
                                   className="border-red-200 text-red-600 hover:bg-red-50 shadow-sm min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px]"
                                   title="Remover"
                                 >
@@ -292,6 +295,14 @@ export default function GroupDetails() {
             onClose={() => setIsModalOpen(false)}
             onSave={handleSave}
             initialData={editingMedium}
+          />
+
+          <ConfirmDeleteDialog
+            isOpen={!!deletingMedium}
+            onClose={() => setDeletingMedium(null)}
+            onConfirm={confirmDelete}
+            itemName={deletingMedium?.nome || ''}
+            itemType="medium"
           />
         </TabsContent>
         <TabsContent value="listas">

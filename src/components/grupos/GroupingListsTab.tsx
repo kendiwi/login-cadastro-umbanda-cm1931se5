@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 
 export function GroupingListsTab({
   groupId,
@@ -28,6 +29,7 @@ export function GroupingListsTab({
   const { lists, addList, updateList, deleteList } = useGroupingLists(groupId)
   const [isOpen, setIsOpen] = useState(false)
   const [editingList, setEditingList] = useState<GroupingList | null>(null)
+  const [deletingList, setDeletingList] = useState<GroupingList | null>(null)
 
   const [name, setName] = useState('')
   const [selectedMediums, setSelectedMediums] = useState<string[]>([])
@@ -43,6 +45,17 @@ export function GroupingListsTab({
       setSelectedMediums([])
     }
     setIsOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingList) return
+    try {
+      await deleteList(deletingList.id)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setDeletingList(null)
+    }
   }
 
   const handleSave = async () => {
@@ -104,7 +117,7 @@ export function GroupingListsTab({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => deleteList(list.id)}
+                  onClick={() => setDeletingList(list)}
                   className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50"
                 >
                   <Trash2 className="w-4 h-4 mr-2 sm:mr-1" /> Remover
@@ -195,6 +208,14 @@ export function GroupingListsTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        isOpen={!!deletingList}
+        onClose={() => setDeletingList(null)}
+        onConfirm={confirmDelete}
+        itemName={deletingList?.name || ''}
+        itemType="lista"
+      />
     </div>
   )
 }

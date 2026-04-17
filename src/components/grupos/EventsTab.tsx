@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 
 export function EventsTab({
   groupId,
@@ -58,6 +59,7 @@ export function EventsTab({
   const [isOpen, setIsOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<GiraEvent | null>(null)
   const [attendanceEvent, setAttendanceEvent] = useState<GiraEvent | null>(null)
+  const [deletingEvent, setDeletingEvent] = useState<GiraEvent | null>(null)
 
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
@@ -122,6 +124,17 @@ export function EventsTab({
   const getExpectedCount = (id: string) => {
     const list = lists.find((l) => l.id === id)
     return list ? list.mediumIds.length : 'Lista removida'
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingEvent) return
+    try {
+      await deleteEvent(deletingEvent.id)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setDeletingEvent(null)
+    }
   }
 
   const handleSaveAttendance = async (
@@ -362,7 +375,7 @@ export function EventsTab({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deleteEvent(ev.id)}
+                      onClick={() => setDeletingEvent(ev)}
                       className="text-red-600 hover:bg-red-50 ml-1"
                       title="Excluir Evento"
                     >
@@ -462,6 +475,14 @@ export function EventsTab({
         mediuns={mediuns}
         isOwner={isOwner}
         onSave={handleSaveAttendance}
+      />
+
+      <ConfirmDeleteDialog
+        isOpen={!!deletingEvent}
+        onClose={() => setDeletingEvent(null)}
+        onConfirm={confirmDelete}
+        itemName={deletingEvent?.name || ''}
+        itemType="evento"
       />
     </div>
   )
