@@ -70,7 +70,9 @@ export function useEvents(groupId: string) {
     load()
   })
 
-  const addEvent = async (event: Omit<GiraEvent, 'id' | 'groupId'>) => {
+  const addEvent = async (
+    event: Omit<GiraEvent, 'id' | 'groupId'> & { participantIds?: string[] },
+  ) => {
     const createdEvent = await pb.collection('eventos_gira').create({
       grupo_id: groupId,
       nome_evento: event.name,
@@ -82,12 +84,25 @@ export function useEvents(groupId: string) {
       status: event.status,
     })
 
-    if (!event.listId) {
+    if (event.participantIds && event.participantIds.length > 0) {
+      try {
+        await Promise.all(
+          event.participantIds.map((mId) =>
+            pb.collection('presenca').create({
+              evento_id: createdEvent.id,
+              medium_id: mId,
+              presente: false,
+            }),
+          ),
+        )
+      } catch (error) {
+        console.error('Failed to create attendance records', error)
+      }
+    } else if (!event.listId) {
       try {
         const allMediuns = await pb.collection('mediuns').getFullList({
           filter: `grupo_id = "${groupId}"`,
         })
-
         await Promise.all(
           allMediuns.map((m) =>
             pb.collection('presenca').create({
@@ -98,12 +113,15 @@ export function useEvents(groupId: string) {
           ),
         )
       } catch (error) {
-        console.error('Failed to create attendance records for all mediums', error)
+        console.error('Failed to create attendance records', error)
       }
     }
   }
 
-  const updateEvent = async (id: string, event: Partial<GiraEvent>) => {
+  const updateEvent = async (
+    id: string,
+    event: Partial<GiraEvent> & { participantIds?: string[] },
+  ) => {
     if (
       event.name !== undefined ||
       event.status !== undefined ||
@@ -124,6 +142,26 @@ export function useEvents(groupId: string) {
 
       if (Object.keys(data).length > 0) {
         await pb.collection('eventos_gira').update(id, data)
+      }
+    }
+
+    if (event.participantIds) {
+      const existing = await pb.collection('presenca').getFullList({
+        filter: `evento_id = "${id}"`,
+      })
+      const existingIds = existing.map((p) => p.medium_id)
+      const toRemove = existing.filter((p) => !event.participantIds!.includes(p.medium_id))
+      const toAdd = event.participantIds.filter((mId) => !existingIds.includes(mId))
+
+      for (const p of toRemove) {
+        await pb.collection('presenca').delete(p.id)
+      }
+      for (const mId of toAdd) {
+        await pb.collection('presenca').create({
+          evento_id: id,
+          medium_id: mId,
+          presente: false,
+        })
       }
     }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit, Trash2, Calendar, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEvents, GiraEvent } from '@/hooks/use-events'
@@ -41,6 +41,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
+import { cn } from '@/lib/utils'
+import { Checkbox } from '@/components/ui/checkbox'
+import { getLicencasByGroup, LicencaMedium } from '@/services/licencas'
+import useRealtime from '@/hooks/use-realtime'
 
 export function EventsTab({
   groupId,
@@ -67,9 +71,41 @@ export function EventsTab({
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [listId, setListId] = useState('')
-  const [listType, setListType] = useState<'specific' | 'all'>('all')
+  const [listType, setListType] = useState<'specific' | 'all' | 'manual'>('all')
+  const [selectedMediums, setSelectedMediums] = useState<string[]>([])
   const [status, setStatus] = useState<'planejado' | 'em andamento' | 'fechado'>('planejado')
+
   const isMobile = useIsMobile()
+  const [licencas, setLicencas] = useState<LicencaMedium[]>([])
+
+  useEffect(() => {
+    if (groupId) {
+      getLicencasByGroup(groupId).then(setLicencas).catch(console.error)
+    }
+  }, [groupId])
+
+  useRealtime('licencas_mediuns', () => {
+    getLicencasByGroup(groupId).then(setLicencas).catch(console.error)
+  })
+
+  const checkIsOnLeave = useCallback(
+    (mediumId: string, checkDate: string) => {
+      if (!checkDate) return false
+      return licencas.some((l) => {
+        if (l.medium_id !== mediumId) return false
+        const startStr = l.data_inicio.split(' ')[0]
+        const endStr = l.data_fim.split(' ')[0]
+        return checkDate >= startStr && checkDate <= endStr
+      })
+    },
+    [licencas],
+  )
+
+  useEffect(() => {
+    if (date) {
+      setSelectedMediums((prev) => prev.filter((id) => !checkIsOnLeave(id, date)))
+    }
+  }, [date, checkIsOnLeave])
 
   const openModal = (ev?: GiraEvent) => {
     if (ev) {
@@ -79,9 +115,27 @@ export function EventsTab({
       setTime(ev.time)
       setLocation(ev.location)
       setDescription(ev.description)
-      setListId(ev.listId || '')
-      setListType(ev.listId ? 'specific' : 'all')
       setStatus(ev.status)
+
+      if (ev.listId) {
+        setListId(ev.listId)
+        setListType('specific')
+        setSelectedMediums([])
+      } else {
+        setListId('')
+        const attendanceKeys = Object.keys(ev.attendance || {})
+        const validMediums = mediuns.filter((m) => !checkIsOnLeave(m.id, ev.date)).map((m) => m.id)
+        const isAll =
+          validMediums.every((id) => attendanceKeys.includes(id)) && attendanceKeys.length > 0
+
+        if (isAll || attendanceKeys.length === 0) {
+          setListType('all')
+          setSelectedMediums(validMediums)
+        } else {
+          setListType('manual')
+          setSelectedMediums(attendanceKeys)
+        }
+      }
     } else {
       setEditingEvent(null)
       setName('')
@@ -91,6 +145,7 @@ export function EventsTab({
       setDescription('')
       setListId('')
       setListType('all')
+      setSelectedMediums(mediuns.filter((m) => !checkIsOnLeave(m.id, '')).map((m) => m.id))
       setStatus('planejado')
     }
     setIsOpen(true)
@@ -99,6 +154,19 @@ export function EventsTab({
   const handleSave = async () => {
     if (!name || !date || !time || !location) return
     if (listType === 'specific' && !listId) return
+    if (listType === 'manual' && selectedMediums.length === 0) return
+
+    let participantIds: string[] = []
+    if (listType === 'manual') {
+      participantIds = selectedMediums
+    } else if (listType === 'all') {
+      participantIds = mediuns.map((m) => m.id).filter((id) => !checkIsOnLeave(id, date))
+    } else if (listType === 'specific' && listId) {
+      const list = lists.find((l) => l.id === listId)
+      if (list) {
+        participantIds = list.mediumIds.filter((id) => !checkIsOnLeave(id, date))
+      }
+    }
 
     const eventData = {
       name,
@@ -108,6 +176,7 @@ export function EventsTab({
       description,
       listId: listType === 'specific' ? listId : '',
       status,
+      participantIds,
     }
     try {
       if (editingEvent) {
@@ -121,9 +190,10 @@ export function EventsTab({
     }
   }
 
-  const getExpectedCount = (id: string) => {
+  const getExpectedCount = (id: string, evDate: string) => {
     const list = lists.find((l) => l.id === id)
-    return list ? list.mediumIds.length : 'Lista removida'
+    if (!list) return 'Lista removida'
+    return list.mediumIds.filter((mId) => !checkIsOnLeave(mId, evDate)).length
   }
 
   const confirmDelete = async () => {
@@ -191,7 +261,12 @@ export function EventsTab({
         <Label>Participantes</Label>
         <RadioGroup
           value={listType}
-          onValueChange={(val: any) => setListType(val)}
+          onValueChange={(val: any) => {
+            setListType(val)
+            if (val === 'all')
+              setSelectedMediums(mediuns.map((m) => m.id).filter((id) => !checkIsOnLeave(id, date)))
+            else if (val === 'manual') setSelectedMediums([])
+          }}
           className="flex flex-col sm:flex-row gap-4"
         >
           <div className="flex items-center space-x-2">
@@ -204,6 +279,12 @@ export function EventsTab({
             <RadioGroupItem value="specific" id="r-specific" />
             <Label htmlFor="r-specific" className="cursor-pointer font-normal">
               Lista Específica
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="manual" id="r-manual" />
+            <Label htmlFor="r-manual" className="cursor-pointer font-normal">
+              Seleção Manual
             </Label>
           </div>
         </RadioGroup>
@@ -219,7 +300,8 @@ export function EventsTab({
             <SelectContent>
               {lists.map((l) => (
                 <SelectItem key={l.id} value={l.id}>
-                  {l.name} ({l.mediumIds.length} médiuns)
+                  {l.name} ({l.mediumIds.filter((id) => !checkIsOnLeave(id, date)).length}{' '}
+                  disponíveis)
                 </SelectItem>
               ))}
               {lists.length === 0 && (
@@ -229,8 +311,121 @@ export function EventsTab({
               )}
             </SelectContent>
           </Select>
+
+          {listId && (
+            <div className="mt-4 space-y-2 max-h-40 overflow-y-auto border border-purple-100 rounded-md p-3 bg-slate-50/50">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                Médiuns da Lista
+              </Label>
+              {lists
+                .find((l) => l.id === listId)
+                ?.mediumIds.map((mId) => {
+                  const m = mediuns.find((x) => x.id === mId)
+                  if (!m) return null
+                  const onLeave = checkIsOnLeave(m.id, date)
+                  return (
+                    <div key={m.id} className="flex items-center justify-between py-1">
+                      <span
+                        className={cn(
+                          'text-sm',
+                          onLeave ? 'text-muted-foreground line-through' : 'text-slate-700',
+                        )}
+                      >
+                        {m.nome}
+                      </span>
+                      {onLeave && (
+                        <Badge
+                          variant="outline"
+                          className="text-red-600 border-red-200 bg-red-50 text-[10px] py-0 h-5"
+                        >
+                          🔴 Em Licença
+                        </Badge>
+                      )}
+                    </div>
+                  )
+                })}
+            </div>
+          )}
         </div>
       )}
+
+      {listType === 'manual' && (
+        <div className="space-y-2 animate-fade-in-up">
+          <Label>Selecione os Médiuns</Label>
+          <div className="max-h-48 overflow-y-auto border border-purple-100 rounded-md p-3 bg-slate-50/50 space-y-2">
+            {mediuns.map((m) => {
+              const onLeave = checkIsOnLeave(m.id, date)
+              return (
+                <div key={m.id} className="flex items-center space-x-2 py-1">
+                  <Checkbox
+                    id={`m-${m.id}`}
+                    disabled={onLeave}
+                    checked={selectedMediums.includes(m.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) setSelectedMediums((prev) => [...prev, m.id])
+                      else setSelectedMediums((prev) => prev.filter((id) => id !== m.id))
+                    }}
+                  />
+                  <Label
+                    htmlFor={`m-${m.id}`}
+                    className={cn(
+                      'flex-1 cursor-pointer font-normal text-sm',
+                      onLeave ? 'text-muted-foreground' : 'text-slate-700',
+                    )}
+                  >
+                    {m.nome}
+                  </Label>
+                  {onLeave && (
+                    <Badge
+                      variant="outline"
+                      className="text-red-600 border-red-200 bg-red-50 text-[10px] py-0 h-5"
+                    >
+                      🔴 Em Licença
+                    </Badge>
+                  )}
+                </div>
+              )
+            })}
+            {mediuns.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhum médium cadastrado.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {listType === 'all' && (
+        <div className="space-y-2 animate-fade-in-up">
+          <div className="max-h-40 overflow-y-auto border border-purple-100 rounded-md p-3 bg-slate-50/50 space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">
+              Pré-visualização
+            </Label>
+            {mediuns.map((m) => {
+              const onLeave = checkIsOnLeave(m.id, date)
+              return (
+                <div key={m.id} className="flex items-center justify-between py-1">
+                  <span
+                    className={cn(
+                      'text-sm',
+                      onLeave ? 'text-muted-foreground line-through' : 'text-slate-700',
+                    )}
+                  >
+                    {m.nome}
+                  </span>
+                  {onLeave && (
+                    <Badge
+                      variant="outline"
+                      className="text-red-600 border-red-200 bg-red-50 text-[10px] py-0 h-5"
+                    >
+                      🔴 Em Licença
+                    </Badge>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="status">Status</Label>
         <Select
@@ -322,19 +517,22 @@ export function EventsTab({
                         {lists.find((l) => l.id === ev.listId)?.name || 'Lista removida'}
                       </span>
                       <Badge variant="outline" className="bg-slate-50">
-                        {getExpectedCount(ev.listId)} esperados
+                        {getExpectedCount(ev.listId, ev.date)} esperados
                       </Badge>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <span className="text-xs font-medium text-purple-700 mb-1">
-                        Todos os Médiuns
+                        {Object.keys(ev.attendance || {}).length > 0 &&
+                        Object.keys(ev.attendance || {}).length < mediuns.length
+                          ? 'Seleção Manual'
+                          : 'Todos os Médiuns'}
                       </span>
                       <Badge
                         variant="outline"
                         className="bg-purple-50 text-purple-700 border-purple-200"
                       >
-                        {mediuns.length} esperados
+                        {Object.keys(ev.attendance || {}).length} esperados
                       </Badge>
                     </div>
                   )}
@@ -414,7 +612,12 @@ export function EventsTab({
                   onClick={handleSave}
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                   disabled={
-                    !name || !date || !time || !location || (listType === 'specific' && !listId)
+                    !name ||
+                    !date ||
+                    !time ||
+                    !location ||
+                    (listType === 'specific' && !listId) ||
+                    (listType === 'manual' && selectedMediums.length === 0)
                   }
                 >
                   Salvar
@@ -428,7 +631,7 @@ export function EventsTab({
         </Drawer>
       ) : (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle className="text-purple-900">
                 {editingEvent ? 'Editar Evento' : 'Novo Evento'}
@@ -447,7 +650,12 @@ export function EventsTab({
                 onClick={handleSave}
                 className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
                 disabled={
-                  !name || !date || !time || !location || (listType === 'specific' && !listId)
+                  !name ||
+                  !date ||
+                  !time ||
+                  !location ||
+                  (listType === 'specific' && !listId) ||
+                  (listType === 'manual' && selectedMediums.length === 0)
                 }
               >
                 Salvar
@@ -461,17 +669,28 @@ export function EventsTab({
         isOpen={!!attendanceEvent}
         onClose={() => setAttendanceEvent(null)}
         event={attendanceEvent}
-        list={
-          attendanceEvent
-            ? attendanceEvent.listId
-              ? lists.find((l) => l.id === attendanceEvent.listId) || null
-              : ({
-                  id: 'all',
-                  name: 'Todos os Médiuns',
-                  mediumIds: mediuns.map((m) => m.id),
-                } as any)
-            : null
-        }
+        list={(() => {
+          if (!attendanceEvent) return null
+          if (attendanceEvent.listId) {
+            const found = lists.find((l) => l.id === attendanceEvent.listId)
+            if (!found) return null
+            return {
+              ...found,
+              mediumIds: found.mediumIds.filter((id) => !checkIsOnLeave(id, attendanceEvent.date)),
+            }
+          }
+
+          const attendanceKeys = Object.keys(attendanceEvent.attendance || {})
+          const isManual = attendanceKeys.length > 0 && attendanceKeys.length < mediuns.length
+
+          return {
+            id: isManual ? 'manual' : 'all',
+            name: isManual ? 'Seleção Manual' : 'Todos os Médiuns',
+            mediumIds: isManual
+              ? attendanceKeys
+              : mediuns.map((m) => m.id).filter((id) => !checkIsOnLeave(id, attendanceEvent.date)),
+          } as any
+        })()}
         mediuns={mediuns}
         isOwner={isOwner}
         onSave={handleSaveAttendance}

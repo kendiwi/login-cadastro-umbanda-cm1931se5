@@ -10,6 +10,13 @@ export interface LicencaMedium {
   updated: string
 }
 
+export const getLicencasByGroup = async (groupId: string) => {
+  return pb.collection('licencas_mediuns').getFullList<LicencaMedium>({
+    filter: `medium_id.grupo_id = "${groupId}"`,
+    sort: '-data_inicio',
+  })
+}
+
 export const getLicencasByMedium = async (mediumId: string) => {
   return pb.collection('licencas_mediuns').getFullList<LicencaMedium>({
     filter: `medium_id = "${mediumId}"`,
