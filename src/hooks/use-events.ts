@@ -24,6 +24,7 @@ export function useEvents(groupId: string) {
       const [eventRecords, presencaRecords] = await Promise.all([
         pb.collection('eventos_gira').getFullList({
           filter: `grupo_id = "${groupId}"`,
+          sort: '-data',
         }),
         pb.collection('presenca').getFullList({
           filter: `evento_id.grupo_id = "${groupId}"`,
