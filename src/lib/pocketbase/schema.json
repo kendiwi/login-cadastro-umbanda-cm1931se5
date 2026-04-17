@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-17T01:31:18.202Z",
+  "generatedAt": "2026-04-17T01:37:14.428Z",
   "collections": [
     {
       "name": "users",
@@ -274,6 +274,12 @@
         },
         {
           "name": "licenca",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ativo",
           "type": "bool",
           "required": false,
           "system": false

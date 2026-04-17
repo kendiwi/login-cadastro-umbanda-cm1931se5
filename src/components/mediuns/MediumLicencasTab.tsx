@@ -78,14 +78,6 @@ export function MediumLicencasTab({ mediumId }: { mediumId: string }) {
       0,
     ).toISOString()
 
-    if (checkOverlap(startIso, endIso, editingId || undefined)) {
-      return toast({
-        title: 'Erro',
-        description: 'O período conflita com uma licença existente',
-        variant: 'destructive',
-      })
-    }
-
     try {
       if (editingId) {
         await updateLicenca(editingId, { data_inicio: startIso, data_fim: endIso, justificativa })

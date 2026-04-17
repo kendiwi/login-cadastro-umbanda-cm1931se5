@@ -10,16 +10,21 @@ export interface Medium {
   contato: string
   foto: string
   licenca?: boolean
+  ativo?: boolean
 }
 
-export function useMediuns(grupoId: string) {
+export function useMediuns(grupoId: string, options?: { activeOnly?: boolean }) {
   const [mediuns, setMediuns] = useState<Medium[]>([])
 
   const load = useCallback(async () => {
     if (!grupoId) return
     try {
+      let filterStr = `grupo_id = "${grupoId}"`
+      if (options?.activeOnly) {
+        filterStr += ` && ativo = true`
+      }
       const records = await pb.collection('mediuns').getFullList({
-        filter: `grupo_id = "${grupoId}"`,
+        filter: filterStr,
         sort: 'nome',
       })
       setMediuns(
@@ -31,6 +36,7 @@ export function useMediuns(grupoId: string) {
           contato: r.contato || '',
           foto: r.foto ? pb.files.getURL(r, r.foto) : '',
           licenca: r.licenca || false,
+          ativo: r.ativo !== false,
         })),
       )
     } catch (error) {
@@ -51,6 +57,7 @@ export function useMediuns(grupoId: string) {
     const formData = new FormData()
     formData.append('grupo_id', grupoId)
     formData.append('nome', medium.nome)
+    formData.append('ativo', 'true')
     if (medium.data_nascimento) {
       formData.append('data_nascimento', medium.data_nascimento + ' 12:00:00.000Z')
     }
@@ -95,5 +102,9 @@ export function useMediuns(grupoId: string) {
     await pb.collection('mediuns').delete(id)
   }
 
-  return { mediuns, addMedium, updateMedium, deleteMedium, refresh: load }
+  const deactivateMedium = async (id: string) => {
+    await pb.collection('mediuns').update(id, { ativo: false })
+  }
+
+  return { mediuns, addMedium, updateMedium, deleteMedium, deactivateMedium, refresh: load }
 }

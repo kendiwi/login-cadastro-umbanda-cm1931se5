@@ -162,33 +162,35 @@ export function GroupingListsTab({
               <Label>Selecione os Médiuns</Label>
               <div className="border border-purple-100 rounded-md overflow-hidden bg-slate-50">
                 <ScrollArea className="h-[200px] p-4">
-                  {mediuns.map((m) => (
-                    <div
-                      key={m.id}
-                      className="flex items-center space-x-3 mb-3 p-2 rounded-md hover:bg-purple-100/50 transition-colors"
-                    >
-                      <Checkbox
-                        id={m.id}
-                        checked={selectedMediums.includes(m.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedMediums([...selectedMediums, m.id])
-                          } else {
-                            setSelectedMediums(selectedMediums.filter((id) => id !== m.id))
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={m.id}
-                        className="text-sm font-medium leading-none cursor-pointer flex-1"
+                  {mediuns
+                    .filter((m) => m.ativo !== false)
+                    .map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex items-center space-x-3 mb-3 p-2 rounded-md hover:bg-purple-100/50 transition-colors"
                       >
-                        {m.nome}
-                      </label>
-                    </div>
-                  ))}
-                  {mediuns.length === 0 && (
+                        <Checkbox
+                          id={m.id}
+                          checked={selectedMediums.includes(m.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedMediums([...selectedMediums, m.id])
+                            } else {
+                              setSelectedMediums(selectedMediums.filter((id) => id !== m.id))
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={m.id}
+                          className="text-sm font-medium leading-none cursor-pointer flex-1"
+                        >
+                          {m.nome}
+                        </label>
+                      </div>
+                    ))}
+                  {mediuns.filter((m) => m.ativo !== false).length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhum médium cadastrado neste grupo.
+                      Nenhum médium ativo cadastrado neste grupo.
                     </p>
                   )}
                 </ScrollArea>

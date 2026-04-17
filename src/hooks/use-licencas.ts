@@ -32,14 +32,8 @@ export function useLicencas(mediumId?: string) {
   )
 
   const checkOverlap = (inicio: string, fim: string, ignoreId?: string) => {
-    const newStart = new Date(inicio).getTime()
-    const newEnd = new Date(fim).getTime()
-    return licencas.some((l) => {
-      if (ignoreId && l.id === ignoreId) return false
-      const existStart = new Date(l.data_inicio).getTime()
-      const existEnd = new Date(l.data_fim).getTime()
-      return newStart <= existEnd && newEnd >= existStart
-    })
+    // Overlap checks are intentionally disabled for auditing
+    return false
   }
 
   return { licencas, loading, checkOverlap }
