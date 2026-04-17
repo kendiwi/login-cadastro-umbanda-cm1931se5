@@ -17,12 +17,20 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Trophy, AlertTriangle, CalendarDays, Users } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 
 export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: Medium[] }) {
   const { events } = useEvents(groupId)
   const { lists } = useGroupingLists(groupId)
 
   const [licencas, setLicencas] = useState<LicencaMedium[]>([])
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
 
   const loadLicencas = async () => {
     try {
@@ -120,11 +128,16 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
         let totalEsperados = 0
         let presentes = 0
         let licencasCount = 0
+        const ausentesList: Medium[] = []
+        const licencasList: Medium[] = []
 
         const evDateStr = ev.date.split(' ')[0]
 
         expectedMediuns.forEach((mId) => {
           totalEsperados++
+
+          const medium = mediuns.find((m) => m.id === mId)
+          if (!medium) return
 
           const mediumLicencas = licencas.filter((l) => l.medium_id === mId)
           const isOnLeave = mediumLicencas.some((l) => {
@@ -137,8 +150,14 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
             presentes++
           } else if (isOnLeave) {
             licencasCount++
+            licencasList.push(medium)
+          } else {
+            ausentesList.push(medium)
           }
         })
+
+        ausentesList.sort((a, b) => a.nome.localeCompare(b.nome))
+        licencasList.sort((a, b) => a.nome.localeCompare(b.nome))
 
         const avaliaveis = totalEsperados - licencasCount
         const ausentes = avaliaveis - presentes
@@ -151,6 +170,8 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
           ausentes,
           licencasCount,
           percentual,
+          ausentesList,
+          licencasList,
         }
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -389,7 +410,11 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                   </TableHeader>
                   <TableBody>
                     {eventStats.map((ev) => (
-                      <TableRow key={ev.id}>
+                      <TableRow
+                        key={ev.id}
+                        className="cursor-pointer hover:bg-purple-50/30 transition-colors"
+                        onClick={() => setSelectedEventId(ev.id)}
+                      >
                         <TableCell>
                           <div className="font-bold text-purple-900 whitespace-nowrap">
                             {ev.name}
@@ -447,6 +472,104 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
           </Card>
         </TabsContent>
       </Tabs>
+
+      {(() => {
+        const selectedEventData = eventStats.find((ev) => ev.id === selectedEventId)
+        return (
+          <Dialog
+            open={!!selectedEventId}
+            onOpenChange={(open) => !open && setSelectedEventId(null)}
+          >
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-purple-900 text-xl">
+                  {selectedEventData?.name}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedEventData && selectedEventData.date.split('-').reverse().join('/')} -{' '}
+                  {selectedEventData?.location}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <Card className="border-rose-100 shadow-sm">
+                  <CardHeader className="bg-rose-50/50 pb-3 border-b border-rose-50">
+                    <CardTitle className="text-rose-800 text-base flex items-center justify-between">
+                      <span>Ausentes</span>
+                      <Badge
+                        variant="outline"
+                        className="bg-rose-100 text-rose-700 border-rose-200"
+                      >
+                        {selectedEventData?.ausentesList.length || 0}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="max-h-[300px] overflow-y-auto p-4 space-y-3">
+                      {!selectedEventData?.ausentesList.length ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Nenhum médium ausente
+                        </p>
+                      ) : (
+                        selectedEventData.ausentesList.map((m) => (
+                          <div key={m.id} className="flex items-center gap-3">
+                            <Avatar className="w-8 h-8">
+                              <AvatarImage src={m.foto} />
+                              <AvatarFallback className="bg-rose-100 text-rose-700">
+                                {m.nome.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-medium text-slate-700 truncate">
+                              {m.nome}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-amber-100 shadow-sm">
+                  <CardHeader className="bg-amber-50/50 pb-3 border-b border-amber-50">
+                    <CardTitle className="text-amber-800 text-base flex items-center justify-between">
+                      <span>Em Licença</span>
+                      <Badge
+                        variant="outline"
+                        className="bg-amber-100 text-amber-700 border-amber-200"
+                      >
+                        {selectedEventData?.licencasList.length || 0}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="max-h-[300px] overflow-y-auto p-4 space-y-3">
+                      {!selectedEventData?.licencasList.length ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Nenhuma licença registrada para este evento.
+                        </p>
+                      ) : (
+                        selectedEventData.licencasList.map((m) => (
+                          <div key={m.id} className="flex items-center gap-3">
+                            <Avatar className="w-8 h-8">
+                              <AvatarImage src={m.foto} />
+                              <AvatarFallback className="bg-amber-100 text-amber-700">
+                                {m.nome.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-medium text-slate-700 truncate">
+                              {m.nome}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )
+      })()}
     </div>
   )
 }
