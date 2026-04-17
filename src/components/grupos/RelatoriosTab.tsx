@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useEvents } from '@/hooks/use-events'
 import { useGroupingLists } from '@/hooks/use-grouping-lists'
 import { Medium } from '@/hooks/use-mediuns'
+import { getLicencasByGroup, LicencaMedium } from '@/services/licencas'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
@@ -20,6 +22,25 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
   const { events } = useEvents(groupId)
   const { lists } = useGroupingLists(groupId)
 
+  const [licencas, setLicencas] = useState<LicencaMedium[]>([])
+
+  const loadLicencas = async () => {
+    try {
+      const data = await getLicencasByGroup(groupId)
+      setLicencas(data)
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  useEffect(() => {
+    loadLicencas()
+  }, [groupId])
+
+  useRealtime('licencas_mediuns', () => {
+    loadLicencas()
+  })
+
   const closedEvents = useMemo(() => events.filter((e) => e.status === 'fechado'), [events])
 
   const mediumStats = useMemo(() => {
@@ -27,6 +48,9 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
       .map((medium) => {
         let totalEvents = 0
         let presencas = 0
+        let licencasCount = 0
+
+        const mediumLicencas = licencas.filter((l) => l.medium_id === medium.id)
 
         closedEvents.forEach((ev) => {
           const isGlobalEvent = !ev.listId
@@ -35,37 +59,50 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
 
           if (isGlobalEvent || isInList) {
             totalEvents++
+
+            const evDateStr = ev.date.split(' ')[0]
+            const isOnLeave = mediumLicencas.some((l) => {
+              const startStr = l.data_inicio.split(' ')[0]
+              const endStr = l.data_fim.split(' ')[0]
+              return evDateStr >= startStr && evDateStr <= endStr
+            })
+
             if (ev.attendance?.[medium.id]) {
               presencas++
+            } else if (isOnLeave) {
+              licencasCount++
             }
           }
         })
 
-        const faltas = totalEvents - presencas
-        const percentual = totalEvents > 0 ? (presencas / totalEvents) * 100 : 0
+        const eventosAvaliados = totalEvents - licencasCount
+        const faltas = eventosAvaliados - presencas
+        const percentual = eventosAvaliados > 0 ? (presencas / eventosAvaliados) * 100 : null
 
         return {
           ...medium,
           totalEvents,
           presencas,
           faltas,
+          licencasCount,
           percentual,
+          eventosAvaliados,
         }
       })
-      .sort((a, b) => b.percentual - a.percentual || b.presencas - a.presencas)
-  }, [mediuns, closedEvents, lists])
+      .sort((a, b) => (b.percentual ?? 0) - (a.percentual ?? 0) || b.presencas - a.presencas)
+  }, [mediuns, closedEvents, lists, licencas])
 
   const topPresentes = useMemo(() => {
     return [...mediumStats]
-      .filter((m) => m.totalEvents > 0)
-      .sort((a, b) => b.percentual - a.percentual || b.presencas - a.presencas)
+      .filter((m) => m.eventosAvaliados > 0)
+      .sort((a, b) => (b.percentual ?? 0) - (a.percentual ?? 0) || b.presencas - a.presencas)
       .slice(0, 3)
   }, [mediumStats])
 
   const topFaltantes = useMemo(() => {
     return [...mediumStats]
-      .filter((m) => m.totalEvents > 0)
-      .sort((a, b) => a.percentual - b.percentual || b.faltas - a.faltas)
+      .filter((m) => m.eventosAvaliados > 0)
+      .sort((a, b) => (a.percentual ?? 0) - (b.percentual ?? 0) || b.faltas - a.faltas)
       .slice(0, 3)
   }, [mediumStats])
 
@@ -79,30 +116,49 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
           : list
             ? list.mediumIds
             : []
-        const totalEsperados = expectedMediuns.length
 
+        let totalEsperados = 0
         let presentes = 0
+        let licencasCount = 0
+
+        const evDateStr = ev.date.split(' ')[0]
+
         expectedMediuns.forEach((mId) => {
-          if (ev.attendance?.[mId]) presentes++
+          totalEsperados++
+
+          const mediumLicencas = licencas.filter((l) => l.medium_id === mId)
+          const isOnLeave = mediumLicencas.some((l) => {
+            const startStr = l.data_inicio.split(' ')[0]
+            const endStr = l.data_fim.split(' ')[0]
+            return evDateStr >= startStr && evDateStr <= endStr
+          })
+
+          if (ev.attendance?.[mId]) {
+            presentes++
+          } else if (isOnLeave) {
+            licencasCount++
+          }
         })
 
-        const ausentes = totalEsperados - presentes
-        const percentual = totalEsperados > 0 ? (presentes / totalEsperados) * 100 : 0
+        const avaliaveis = totalEsperados - licencasCount
+        const ausentes = avaliaveis - presentes
+        const percentual = avaliaveis > 0 ? (presentes / avaliaveis) * 100 : null
 
         return {
           ...ev,
           totalEsperados,
           presentes,
           ausentes,
+          licencasCount,
           percentual,
         }
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [closedEvents, lists, mediuns])
+  }, [closedEvents, lists, mediuns, licencas])
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm flex items-center justify-between">
+      <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-purple-900">Relatórios e Estatísticas</h2>
           <p className="text-sm text-muted-foreground">
@@ -160,7 +216,7 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                           variant="outline"
                           className="bg-emerald-50 text-emerald-700 border-emerald-200"
                         >
-                          {m.percentual.toFixed(0)}%
+                          {(m.percentual ?? 0).toFixed(0)}%
                         </Badge>
                       </div>
                     ))
@@ -215,6 +271,7 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
               <CardTitle className="text-purple-900 flex items-center gap-2">
                 <Users className="w-5 h-5 text-purple-600" /> Relatório Geral de Médiuns
               </CardTitle>
+              <CardDescription>Total de Médiuns: {mediuns.length}</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -228,11 +285,14 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                       <TableHead className="font-semibold text-purple-900 text-center">
                         Presenças
                       </TableHead>
+                      <TableHead className="font-semibold text-purple-900 text-center">
+                        Licenças
+                      </TableHead>
                       <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell">
                         Faltas
                       </TableHead>
                       <TableHead className="font-semibold text-purple-900 text-right">
-                        Assiduidade
+                        Assiduidade (%)
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -254,28 +314,35 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                         <TableCell className="text-center text-emerald-600 font-medium">
                           {m.presencas}
                         </TableCell>
+                        <TableCell className="text-center text-amber-600 font-medium">
+                          {m.licencasCount}
+                        </TableCell>
                         <TableCell className="text-center text-rose-600 font-medium hidden sm:table-cell">
                           {m.faltas}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Badge
-                            variant="outline"
-                            className={
-                              m.percentual >= 75
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : m.percentual >= 50
-                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                  : 'bg-rose-50 text-rose-700 border-rose-200'
-                            }
-                          >
-                            {m.percentual.toFixed(1)}%
-                          </Badge>
+                          {m.percentual === null ? (
+                            <span className="text-muted-foreground font-medium">-</span>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className={
+                                m.percentual >= 75
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : m.percentual >= 50
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }
+                            >
+                              {m.percentual.toFixed(1)}%
+                            </Badge>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
                     {mediumStats.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           Nenhum dado disponível.
                         </TableCell>
                       </TableRow>
@@ -309,11 +376,14 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                       <TableHead className="font-semibold text-purple-900 text-center">
                         Presentes
                       </TableHead>
+                      <TableHead className="font-semibold text-purple-900 text-center">
+                        Licenças
+                      </TableHead>
                       <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell">
                         Ausentes
                       </TableHead>
                       <TableHead className="font-semibold text-purple-900 text-right">
-                        Comparecimento
+                        Comparecimento (%)
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -337,28 +407,35 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                         <TableCell className="text-center text-emerald-600 font-medium">
                           {ev.presentes}
                         </TableCell>
+                        <TableCell className="text-center text-amber-600 font-medium">
+                          {ev.licencasCount}
+                        </TableCell>
                         <TableCell className="text-center text-rose-600 font-medium hidden sm:table-cell">
                           {ev.ausentes}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Badge
-                            variant="outline"
-                            className={
-                              ev.percentual >= 75
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : ev.percentual >= 50
-                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                  : 'bg-rose-50 text-rose-700 border-rose-200'
-                            }
-                          >
-                            {ev.percentual.toFixed(1)}%
-                          </Badge>
+                          {ev.percentual === null ? (
+                            <span className="text-muted-foreground font-medium">-</span>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className={
+                                ev.percentual >= 75
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : ev.percentual >= 50
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }
+                            >
+                              {ev.percentual.toFixed(1)}%
+                            </Badge>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
                     {eventStats.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           Nenhum evento fechado.
                         </TableCell>
                       </TableRow>
