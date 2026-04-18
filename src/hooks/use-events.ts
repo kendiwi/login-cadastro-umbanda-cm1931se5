@@ -17,9 +17,13 @@ export interface GiraEvent {
 
 export function useEvents(groupId: string) {
   const [events, setEvents] = useState<GiraEvent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!groupId) return
+    setIsLoading(true)
+    setError(null)
     try {
       const [eventRecords, presencaRecords] = await Promise.all([
         pb.collection('eventos_gira').getFullList({
@@ -53,9 +57,12 @@ export function useEvents(groupId: string) {
         }
       })
       setEvents(eventsData)
-    } catch (error) {
-      console.error('Failed to load events', error)
+    } catch (err: any) {
+      console.error('Failed to load events', err)
+      setError(err.message || 'Erro ao carregar eventos')
       setEvents([])
+    } finally {
+      setIsLoading(false)
     }
   }, [groupId])
 
@@ -191,5 +198,5 @@ export function useEvents(groupId: string) {
     await pb.collection('eventos_gira').delete(id)
   }
 
-  return { events, addEvent, updateEvent, deleteEvent }
+  return { events, addEvent, updateEvent, deleteEvent, isLoading, error }
 }

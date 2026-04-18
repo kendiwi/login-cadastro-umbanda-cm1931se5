@@ -16,7 +16,20 @@ import {
 } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Trophy, AlertTriangle, CalendarDays, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Trophy,
+  AlertTriangle,
+  CalendarDays,
+  Users,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  CalendarX2,
+  RefreshCcw,
+  LayoutDashboard,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -24,9 +37,63 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, BarChart, Legend } from 'recharts'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+
+const TrendIndicator = ({
+  value,
+  invertColors = false,
+}: {
+  value: number | null
+  invertColors?: boolean
+}) => {
+  if (value === null) return <Minus className="w-4 h-4 text-slate-400" />
+
+  if (value > 10) {
+    return <ArrowUp className={`w-4 h-4 ${invertColors ? 'text-rose-500' : 'text-emerald-500'}`} />
+  }
+  if (value < -10) {
+    return (
+      <ArrowDown className={`w-4 h-4 ${invertColors ? 'text-emerald-500' : 'text-rose-500'}`} />
+    )
+  }
+
+  return <div className="w-4 h-1.5 bg-amber-400 rounded-sm" />
+}
+
+const DashboardSkeleton = () => (
+  <div className="space-y-6 animate-pulse">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[1, 2, 3, 4].map((i) => (
+        <Card key={i} className="border-purple-100 shadow-sm">
+          <CardContent className="p-6">
+            <Skeleton className="h-4 w-24 mb-4 bg-purple-100" />
+            <div className="flex justify-between items-center">
+              <Skeleton className="h-8 w-16 bg-purple-100" />
+              <Skeleton className="h-8 w-8 rounded-full bg-purple-100" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      {[1, 2].map((i) => (
+        <Card key={i} className="border-purple-100 shadow-sm">
+          <CardHeader className="pb-2">
+            <Skeleton className="h-6 w-48 mb-2 bg-purple-100" />
+            <Skeleton className="h-4 w-64 bg-purple-100" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[300px] w-full bg-purple-50/50 rounded-lg" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </div>
+)
 
 export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: Medium[] }) {
-  const { events } = useEvents(groupId)
+  const { events, isLoading, error } = useEvents(groupId)
   const { lists } = useGroupingLists(groupId)
 
   const [licencas, setLicencas] = useState<LicencaMedium[]>([])
@@ -177,6 +244,275 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [closedEvents, lists, mediuns, licencas])
 
+  const chartData = useMemo(() => {
+    return eventStats.map((ev) => {
+      const [year, month, day] = ev.date.split('-')
+      return {
+        ...ev,
+        formattedDate: `${day}/${month}/${year}`,
+      }
+    })
+  }, [eventStats])
+
+  const chart1Config = {
+    presentes: { label: 'Participantes', color: '#9333ea' },
+    percentual: { label: 'Assiduidade (%)', color: '#10b981' },
+  }
+
+  const chart2Config = {
+    ausentes: { label: 'Ausentes', color: '#ef4444' },
+    licencasCount: { label: 'Em Licença', color: '#9ca3af' },
+  }
+
+  const renderDashboardContent = () => {
+    if (isLoading) return <DashboardSkeleton />
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in-up">
+          <AlertTriangle className="w-12 h-12 text-rose-500 mb-4" />
+          <h3 className="text-lg font-bold text-slate-800">Ocorreu um erro ao carregar os dados</h3>
+          <p className="text-slate-500 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            <RefreshCcw className="w-4 h-4 mr-2" /> Tentar Novamente
+          </Button>
+        </div>
+      )
+    }
+
+    if (events.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-purple-100 rounded-xl bg-purple-50/30 animate-fade-in-up">
+          <CalendarX2 className="w-12 h-12 text-purple-300 mb-4" />
+          <h3 className="text-xl font-bold text-purple-900 mb-2">Nenhum evento registrado</h3>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            Você precisa registrar eventos e realizar a chamada para visualizar o painel analítico.
+          </p>
+          <Button
+            onClick={() => {
+              const eventosTab = document.querySelector('[value="eventos"]') as HTMLElement
+              if (eventosTab) eventosTab.click()
+            }}
+          >
+            Criar Evento
+          </Button>
+        </div>
+      )
+    }
+
+    const totalEvents = events.length
+    const numClosed = eventStats.length
+
+    const avgPresentes = numClosed ? eventStats.reduce((a, c) => a + c.presentes, 0) / numClosed : 0
+    const avgAusentes = numClosed ? eventStats.reduce((a, c) => a + c.ausentes, 0) / numClosed : 0
+    const avgLicencas = numClosed
+      ? eventStats.reduce((a, c) => a + c.licencasCount, 0) / numClosed
+      : 0
+
+    const latestEvent = eventStats[0]
+    const prevEvent = eventStats[1]
+
+    const getVariation = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0
+      return ((current - previous) / previous) * 100
+    }
+
+    const trendPresentes =
+      latestEvent && prevEvent ? getVariation(latestEvent.presentes, prevEvent.presentes) : null
+    const trendAusentes =
+      latestEvent && prevEvent ? getVariation(latestEvent.ausentes, prevEvent.ausentes) : null
+    const trendLicencas =
+      latestEvent && prevEvent
+        ? getVariation(latestEvent.licencasCount, prevEvent.licencasCount)
+        : null
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up">
+          <Card className="border-purple-100 shadow-sm transition-all hover:shadow-md">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-slate-500">Total de Eventos</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl font-bold text-purple-900">{totalEvents}</span>
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50">
+                    <Minus className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-purple-100 shadow-sm transition-all hover:shadow-md">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-slate-500">Média de Participantes</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl font-bold text-purple-900">
+                    {avgPresentes.toFixed(1)}
+                  </span>
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50">
+                    <TrendIndicator value={trendPresentes} />
+                  </div>
+                </div>
+                {trendPresentes !== null && (
+                  <span className="text-xs text-slate-400 mt-2">vs último evento</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-purple-100 shadow-sm transition-all hover:shadow-md">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-slate-500">Média de Ausentes</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl font-bold text-purple-900">
+                    {avgAusentes.toFixed(1)}
+                  </span>
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50">
+                    <TrendIndicator value={trendAusentes} invertColors />
+                  </div>
+                </div>
+                {trendAusentes !== null && (
+                  <span className="text-xs text-slate-400 mt-2">vs último evento</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-purple-100 shadow-sm transition-all hover:shadow-md">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-slate-500">Média de Licenças</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl font-bold text-purple-900">
+                    {avgLicencas.toFixed(1)}
+                  </span>
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50">
+                    <TrendIndicator value={trendLicencas} invertColors />
+                  </div>
+                </div>
+                {trendLicencas !== null && (
+                  <span className="text-xs text-slate-400 mt-2">vs último evento</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {numClosed > 0 && (
+          <div
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 animate-fade-in-up"
+            style={{ animationDelay: '100ms' }}
+          >
+            <Card className="border-purple-100 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-purple-900 text-lg">
+                  Assiduidade e Participação
+                </CardTitle>
+                <CardDescription>Evolução de presenças e % de comparecimento</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chart1Config} className="h-[300px] w-full">
+                  <ComposedChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="formattedDate"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      fontSize={12}
+                      stroke="#64748b"
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      orientation="left"
+                      stroke={chart1Config.presentes.color}
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      stroke={chart1Config.percentual.color}
+                      domain={[0, 100]}
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                    <Bar
+                      yAxisId="left"
+                      name={chart1Config.presentes.label}
+                      dataKey="presentes"
+                      fill={chart1Config.presentes.color}
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={40}
+                    />
+                    <Line
+                      yAxisId="right"
+                      name={chart1Config.percentual.label}
+                      dataKey="percentual"
+                      type="monotone"
+                      stroke={chart1Config.percentual.color}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </ComposedChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="border-purple-100 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-purple-900 text-lg">Ausências e Licenças</CardTitle>
+                <CardDescription>Proporção de faltas e membros licenciados</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chart2Config} className="h-[300px] w-full">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="formattedDate"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      fontSize={12}
+                      stroke="#64748b"
+                    />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} stroke="#64748b" />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                    <Bar
+                      name={chart2Config.ausentes.label}
+                      dataKey="ausentes"
+                      stackId="a"
+                      fill={chart2Config.ausentes.color}
+                      radius={[0, 0, 0, 0]}
+                      maxBarSize={40}
+                    />
+                    <Bar
+                      name={chart2Config.licencasCount.label}
+                      dataKey="licencasCount"
+                      stackId="a"
+                      fill={chart2Config.licencasCount.color}
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={40}
+                    />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -188,23 +524,33 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
         </div>
       </div>
 
-      <Tabs defaultValue="por-medium" className="w-full">
-        <TabsList className="mb-4 bg-purple-50/50 text-purple-900 border border-purple-100">
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="mb-4 bg-purple-50/50 text-purple-900 border border-purple-100 flex flex-wrap h-auto p-1">
+          <TabsTrigger
+            value="dashboard"
+            className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm flex items-center gap-2 flex-1 sm:flex-none"
+          >
+            <LayoutDashboard className="w-4 h-4" /> Visão Geral
+          </TabsTrigger>
           <TabsTrigger
             value="por-medium"
-            className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm"
+            className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm flex items-center gap-2 flex-1 sm:flex-none"
           >
-            Por Médium
+            <Users className="w-4 h-4" /> Por Médium
           </TabsTrigger>
           <TabsTrigger
             value="por-evento"
-            className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm"
+            className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm flex items-center gap-2 flex-1 sm:flex-none"
           >
-            Por Evento
+            <CalendarDays className="w-4 h-4" /> Por Evento
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="por-medium" className="space-y-6">
+        <TabsContent value="dashboard" className="focus-visible:outline-none">
+          {renderDashboardContent()}
+        </TabsContent>
+
+        <TabsContent value="por-medium" className="space-y-6 focus-visible:outline-none">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="border-emerald-100 bg-emerald-50/30 shadow-sm">
               <CardHeader className="pb-2">
@@ -343,7 +689,7 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                         </TableCell>
                         <TableCell className="text-right">
                           {m.percentual === null ? (
-                            <span className="text-muted-foreground font-medium">-</span>
+                            <span className="text-muted-foreground font-medium text-sm">N/A</span>
                           ) : (
                             <Badge
                               variant="outline"
@@ -375,7 +721,7 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
           </Card>
         </TabsContent>
 
-        <TabsContent value="por-evento">
+        <TabsContent value="por-evento" className="focus-visible:outline-none">
           <Card className="border-purple-100 shadow-sm">
             <CardHeader className="bg-purple-50/40 border-b border-purple-50">
               <CardTitle className="text-purple-900 flex items-center gap-2">
@@ -440,7 +786,7 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                         </TableCell>
                         <TableCell className="text-right">
                           {ev.percentual === null ? (
-                            <span className="text-muted-foreground font-medium">-</span>
+                            <span className="text-muted-foreground font-medium text-sm">N/A</span>
                           ) : (
                             <Badge
                               variant="outline"
