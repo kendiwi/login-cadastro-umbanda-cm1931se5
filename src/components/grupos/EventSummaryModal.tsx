@@ -58,7 +58,13 @@ export function EventSummaryModal({ isOpen, onClose, event, groupId }: EventSumm
 
       presencas.forEach((p) => {
         const m = allMediuns.find((x) => x.id === p.medium_id)
-        if (m) p.presente ? presentes.push(m) : ausentes.push(m)
+        if (m) {
+          if (p.presente) {
+            presentes.push(m)
+          } else {
+            ausentes.push(m)
+          }
+        }
       })
 
       allMediuns.forEach((m) => {
