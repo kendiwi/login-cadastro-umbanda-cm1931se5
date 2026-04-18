@@ -37,7 +37,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, BarChart, Legend } from 'recharts'
+import {
+  ComposedChart,
+  Line,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  BarChart,
+  Legend,
+  LabelList,
+} from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 
 const TrendIndicator = ({
@@ -245,7 +255,7 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
   }, [closedEvents, lists, mediuns, licencas])
 
   const chartData = useMemo(() => {
-    return eventStats.map((ev) => {
+    return [...eventStats].reverse().map((ev) => {
       const [year, month, day] = ev.date.split('-')
       return {
         ...ev,
@@ -451,7 +461,15 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                       fill={chart1Config.presentes.color}
                       radius={[4, 4, 0, 0]}
                       maxBarSize={40}
-                    />
+                    >
+                      <LabelList
+                        dataKey="presentes"
+                        position="top"
+                        fill="#64748b"
+                        fontSize={11}
+                        formatter={(val: number) => (val > 0 ? val : '')}
+                      />
+                    </Bar>
                     <Line
                       yAxisId="right"
                       name={chart1Config.percentual.label}
@@ -461,7 +479,19 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                       strokeWidth={2}
                       dot={{ r: 4 }}
                       activeDot={{ r: 6 }}
-                    />
+                    >
+                      <LabelList
+                        dataKey="percentual"
+                        position="top"
+                        offset={12}
+                        fill={chart1Config.percentual.color}
+                        fontSize={11}
+                        fontWeight="bold"
+                        formatter={(val: number | null) =>
+                          val !== null ? `${val.toFixed(1).replace('.', ',')}%` : ''
+                        }
+                      />
+                    </Line>
                   </ComposedChart>
                 </ChartContainer>
               </CardContent>
@@ -494,7 +524,15 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                       fill={chart2Config.ausentes.color}
                       radius={[0, 0, 0, 0]}
                       maxBarSize={40}
-                    />
+                    >
+                      <LabelList
+                        dataKey="ausentes"
+                        position="center"
+                        fill="#ffffff"
+                        fontSize={11}
+                        formatter={(val: number) => (val > 0 ? val : '')}
+                      />
+                    </Bar>
                     <Bar
                       name={chart2Config.licencasCount.label}
                       dataKey="licencasCount"
@@ -502,7 +540,15 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
                       fill={chart2Config.licencasCount.color}
                       radius={[4, 4, 0, 0]}
                       maxBarSize={40}
-                    />
+                    >
+                      <LabelList
+                        dataKey="licencasCount"
+                        position="center"
+                        fill="#ffffff"
+                        fontSize={11}
+                        formatter={(val: number) => (val > 0 ? val : '')}
+                      />
+                    </Bar>
                   </BarChart>
                 </ChartContainer>
               </CardContent>
