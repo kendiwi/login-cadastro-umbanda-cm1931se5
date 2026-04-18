@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Edit, Trash2, Calendar, UserCheck } from 'lucide-react'
+import { Plus, Edit, Trash2, Calendar, UserCheck, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEvents, GiraEvent } from '@/hooks/use-events'
 import { useGroupingLists } from '@/hooks/use-grouping-lists'
 import { Medium } from '@/hooks/use-mediuns'
 import { AttendanceModal } from './AttendanceModal'
+import { EventSummaryModal } from './EventSummaryModal'
 import {
   Dialog,
   DialogContent,
@@ -64,6 +65,7 @@ export function EventsTab({
   const [editingEvent, setEditingEvent] = useState<GiraEvent | null>(null)
   const [attendanceEvent, setAttendanceEvent] = useState<GiraEvent | null>(null)
   const [deletingEvent, setDeletingEvent] = useState<GiraEvent | null>(null)
+  const [summaryEvent, setSummaryEvent] = useState<GiraEvent | null>(null)
 
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
@@ -555,6 +557,15 @@ export function EventsTab({
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => setSummaryEvent(ev)}
+                      className="text-blue-600 hover:bg-blue-50 mr-1"
+                      title="Resumo do Evento"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setAttendanceEvent(ev)}
                       className="text-emerald-600 hover:bg-emerald-50 mr-1"
                       title="Lista de Presença"
@@ -702,6 +713,13 @@ export function EventsTab({
         onConfirm={confirmDelete}
         itemName={deletingEvent?.name || ''}
         itemType="evento"
+      />
+
+      <EventSummaryModal
+        isOpen={!!summaryEvent}
+        onClose={() => setSummaryEvent(null)}
+        event={summaryEvent}
+        groupId={groupId}
       />
     </div>
   )
