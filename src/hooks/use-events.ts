@@ -13,6 +13,9 @@ export interface GiraEvent {
   listId: string
   status: 'planejado' | 'em andamento' | 'fechado'
   attendance?: Record<string, boolean>
+  atendimentoPreferencial?: number
+  atendimentoNormal?: number
+  atendimentoPasse?: number
 }
 
 export function useEvents(groupId: string) {
@@ -54,6 +57,9 @@ export function useEvents(groupId: string) {
           listId: e.lista_id || '',
           status: e.status,
           attendance,
+          atendimentoPreferencial: e.atendimento_preferencial,
+          atendimentoNormal: e.atendimento_normal,
+          atendimentoPasse: e.atendimento_passe,
         }
       })
       setEvents(eventsData)
@@ -146,6 +152,10 @@ export function useEvents(groupId: string) {
       if (event.description !== undefined) data.descricao = event.description
       if (event.listId !== undefined) data.lista_id = event.listId || null
       if (event.status) data.status = event.status
+      if (event.atendimentoPreferencial !== undefined)
+        data.atendimento_preferencial = event.atendimentoPreferencial
+      if (event.atendimentoNormal !== undefined) data.atendimento_normal = event.atendimentoNormal
+      if (event.atendimentoPasse !== undefined) data.atendimento_passe = event.atendimentoPasse
 
       if (Object.keys(data).length > 0) {
         await pb.collection('eventos_gira').update(id, data)

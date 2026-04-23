@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Edit, Trash2, Calendar, UserCheck, FileText } from 'lucide-react'
+import { Plus, Edit, Trash2, Calendar, UserCheck, FileText, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEvents, GiraEvent } from '@/hooks/use-events'
 import { useGroupingLists } from '@/hooks/use-grouping-lists'
 import { Medium } from '@/hooks/use-mediuns'
 import { AttendanceModal } from './AttendanceModal'
 import { EventSummaryModal } from './EventSummaryModal'
+import { CloseEventModal } from './CloseEventModal'
 import {
   Dialog,
   DialogContent,
@@ -66,6 +67,7 @@ export function EventsTab({
   const [attendanceEvent, setAttendanceEvent] = useState<GiraEvent | null>(null)
   const [deletingEvent, setDeletingEvent] = useState<GiraEvent | null>(null)
   const [summaryEvent, setSummaryEvent] = useState<GiraEvent | null>(null)
+  const [closingEvent, setClosingEvent] = useState<GiraEvent | null>(null)
 
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
@@ -441,7 +443,7 @@ export function EventsTab({
           <SelectContent>
             <SelectItem value="planejado">Planejado</SelectItem>
             <SelectItem value="em andamento">Em Andamento</SelectItem>
-            <SelectItem value="fechado">Fechado</SelectItem>
+            {editingEvent?.status === 'fechado' && <SelectItem value="fechado">Fechado</SelectItem>}
           </SelectContent>
         </Select>
       </div>
@@ -572,6 +574,17 @@ export function EventsTab({
                     >
                       <UserCheck className="w-4 h-4" />
                     </Button>
+                    {ev.status !== 'fechado' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setClosingEvent(ev)}
+                        className="text-amber-600 hover:bg-amber-50 mr-1"
+                        title="Fechar Evento"
+                      >
+                        <Lock className="w-4 h-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -720,6 +733,15 @@ export function EventsTab({
         onClose={() => setSummaryEvent(null)}
         event={summaryEvent}
         groupId={groupId}
+      />
+
+      <CloseEventModal
+        isOpen={!!closingEvent}
+        onClose={() => setClosingEvent(null)}
+        event={closingEvent}
+        onConfirm={async (id, data) => {
+          await updateEvent(id, data)
+        }}
       />
     </div>
   )
