@@ -151,7 +151,7 @@ export function useOfflineSync(eventId: string | undefined) {
             const filtered = prev.filter((p) => p.mediumId !== mediumId)
             return [...filtered, { mediumId, presente, timestamp: Date.now() }]
           })
-          toast.info('Salvo localmente')
+          toast.warning('Salvo localmente')
           return
         }
 
@@ -170,6 +170,7 @@ export function useOfflineSync(eventId: string | undefined) {
             const filtered = prev.filter((p) => p.mediumId !== mediumId)
             return [...filtered, { mediumId, presente, timestamp: Date.now() }]
           })
+          toast.error('Erro ao salvar')
           setManualSyncRequired(true)
           onRevert()
         }

@@ -20,7 +20,7 @@ import { GiraEvent } from '@/hooks/use-events'
 import { Medium } from '@/hooks/use-mediuns'
 import { GroupingList } from '@/hooks/use-grouping-lists'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, MapPin, WifiOff, Loader2, RefreshCw } from 'lucide-react'
+import { Calendar, MapPin, Wifi, WifiOff, Loader2, RefreshCw } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useOfflineSync } from '@/hooks/use-offline-sync'
 import { cn } from '@/lib/utils'
@@ -105,11 +105,10 @@ export function AttendanceModal({
         </Badge>
       )}
       {pendingChanges.length > 0 && (
-        <Badge
-          variant="secondary"
-          className="bg-amber-100 text-amber-800 border-amber-200 whitespace-nowrap"
-        >
-          {pendingChanges.length} pendente{pendingChanges.length !== 1 ? 's' : ''}
+        <Badge variant="destructive" className="flex items-center gap-1 whitespace-nowrap">
+          {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+          {pendingChanges.length} alteraç{pendingChanges.length !== 1 ? 'ões' : 'ão'} pendente
+          {pendingChanges.length !== 1 ? 's' : ''}
         </Badge>
       )}
     </div>
@@ -143,10 +142,12 @@ export function AttendanceModal({
             <div
               key={m.id}
               className={cn(
-                'flex items-center justify-between p-3 rounded-lg border shadow-sm transition-colors gap-3',
+                'flex items-center justify-between p-3 rounded-lg border shadow-sm transition-all duration-300 gap-3',
                 isEmLicenca
                   ? 'bg-slate-50 border-slate-200'
-                  : 'bg-white border-purple-50 hover:border-purple-200',
+                  : savingIds.has(m.id)
+                    ? 'bg-purple-50/50 border-purple-200 ring-1 ring-purple-100'
+                    : 'bg-white border-purple-50 hover:border-purple-200',
               )}
             >
               <div className="flex items-center gap-3 overflow-hidden min-w-0">
@@ -187,29 +188,32 @@ export function AttendanceModal({
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {savingIds.has(m.id) ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-400">Salvando...</span>
+                <span
+                  className={cn(
+                    'text-sm font-medium transition-colors',
+                    savingIds.has(m.id)
+                      ? 'text-purple-500'
+                      : attendance[m.id] && !isEmLicenca
+                        ? 'text-emerald-600'
+                        : 'text-slate-400',
+                  )}
+                >
+                  {savingIds.has(m.id) ? 'Salvando...' : attendance[m.id] ? 'Presente' : 'Ausente'}
+                </span>
+                <div className="flex items-center gap-2">
+                  {savingIds.has(m.id) && (
                     <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
-                  </div>
-                ) : (
-                  <>
-                    <span
-                      className={cn(
-                        'text-sm font-medium',
-                        attendance[m.id] && !isEmLicenca ? 'text-emerald-600' : 'text-slate-400',
-                      )}
-                    >
-                      {attendance[m.id] ? 'Presente' : 'Ausente'}
-                    </span>
-                    <Switch
-                      checked={!!attendance[m.id]}
-                      onCheckedChange={(c) => handleToggle(m.id, c)}
-                      disabled={isClosed || isEmLicenca}
-                      className="data-[state=checked]:bg-emerald-500"
-                    />
-                  </>
-                )}
+                  )}
+                  <Switch
+                    checked={!!attendance[m.id]}
+                    onCheckedChange={(c) => handleToggle(m.id, c)}
+                    disabled={isClosed || isEmLicenca || savingIds.has(m.id)}
+                    className={cn(
+                      'data-[state=checked]:bg-emerald-500 transition-opacity',
+                      savingIds.has(m.id) && 'opacity-50',
+                    )}
+                  />
+                </div>
               </div>
             </div>
           )
@@ -230,19 +234,19 @@ export function AttendanceModal({
       </Button>
       {!isClosed && (
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
-          {manualSyncRequired && pendingChanges.length > 0 && (
+          {isOnline && pendingChanges.length > 0 && (
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={triggerSync}
-              disabled={isSyncing || !isOnline}
-              className="w-full sm:w-auto border-amber-200 text-amber-700 hover:bg-amber-50"
+              disabled={isSyncing}
+              className="w-full sm:w-auto bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
             >
               {isSyncing ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : (
                 <RefreshCw className="w-4 h-4 mr-2" />
               )}
-              Sincronizar Manualmente
+              Sincronizar manualmente
             </Button>
           )}
           <Button
