@@ -5,7 +5,7 @@ import { useEvents, GiraEvent } from '@/hooks/use-events'
 import { useGroupingLists } from '@/hooks/use-grouping-lists'
 import { Medium } from '@/hooks/use-mediuns'
 import { AttendanceModal } from './AttendanceModal'
-import { EventSummaryModal } from './EventSummaryModal'
+import { EventSummaryModal } from '@/components/EventSummaryModal'
 import { CloseEventModal } from './CloseEventModal'
 import {
   Dialog,
@@ -731,8 +731,7 @@ export function EventsTab({
       <EventSummaryModal
         isOpen={!!summaryEvent}
         onClose={() => setSummaryEvent(null)}
-        event={summaryEvent}
-        groupId={groupId}
+        eventId={summaryEvent?.id || ''}
       />
 
       <CloseEventModal
