@@ -29,6 +29,8 @@ import {
   CalendarX2,
   RefreshCcw,
   LayoutDashboard,
+  Download,
+  Copy,
 } from 'lucide-react'
 import {
   Dialog,
@@ -49,6 +51,7 @@ import {
   LabelList,
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { toast } from 'sonner'
 
 const TrendIndicator = ({
   value,
@@ -102,6 +105,13 @@ const DashboardSkeleton = () => (
   </div>
 )
 
+const TableSkeleton = () => (
+  <div className="space-y-4 animate-pulse pt-4">
+    <Skeleton className="h-10 w-[250px] bg-purple-100" />
+    <Skeleton className="h-[400px] w-full bg-purple-50/50 rounded-xl" />
+  </div>
+)
+
 export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: Medium[] }) {
   const { events, isLoading, error } = useEvents(groupId)
   const { lists } = useGroupingLists(groupId)
@@ -113,14 +123,20 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
     try {
       const data = await getLicencasByGroup(groupId)
       setLicencas(data)
-    } catch (error) {
-      console.error(error)
+    } catch (err) {
+      console.error(err)
     }
   }
 
   useEffect(() => {
     loadLicencas()
   }, [groupId])
+
+  useEffect(() => {
+    if (error) {
+      toast.error('Erro ao carregar métricas do relatório')
+    }
+  }, [error])
 
   useRealtime('licencas_mediuns', () => {
     loadLicencas()
@@ -192,7 +208,7 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
   }, [mediumStats])
 
   const eventStats = useMemo(() => {
-    return closedEvents
+    return events
       .map((ev) => {
         const isGlobalEvent = !ev.listId
         const list = lists.find((l) => l.id === ev.listId)
@@ -252,17 +268,21 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
         }
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [closedEvents, lists, mediuns, licencas])
+  }, [events, lists, mediuns, licencas])
+
+  const closedEventStats = useMemo(() => {
+    return eventStats.filter((ev) => ev.status === 'fechado')
+  }, [eventStats])
 
   const chartData = useMemo(() => {
-    return [...eventStats].reverse().map((ev) => {
+    return [...closedEventStats].reverse().map((ev) => {
       const [year, month, day] = ev.date.split('-')
       return {
         ...ev,
         formattedDate: `${day}/${month}/${year}`,
       }
     })
-  }, [eventStats])
+  }, [closedEventStats])
 
   const chart1Config = {
     presentes: { label: 'Participantes', color: '#9333ea' },
@@ -272,6 +292,102 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
   const chart2Config = {
     ausentes: { label: 'Ausentes', color: '#ef4444' },
     licencasCount: { label: 'Em Licença', color: '#9ca3af' },
+  }
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Evento',
+      'Data',
+      'Status',
+      'Preferencial',
+      'Normal',
+      'Passe',
+      'Total Esperados',
+      'Presentes',
+      'Licenças',
+      'Ausentes',
+      'Comparecimento (%)',
+    ]
+
+    const rows = eventStats.map((ev) => [
+      `"${ev.name}"`,
+      ev.date.split('-').reverse().join('/'),
+      ev.status,
+      ev.status === 'fechado' ? ev.atendimentoPreferencial || 0 : '-',
+      ev.status === 'fechado' ? ev.atendimentoNormal || 0 : '-',
+      ev.status === 'fechado' ? ev.atendimentoPasse || 0 : '-',
+      ev.totalEsperados,
+      ev.presentes,
+      ev.licencasCount,
+      ev.ausentes,
+      ev.percentual !== null ? ev.percentual.toFixed(1) + '%' : 'N/A',
+    ])
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'relatorio_eventos.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const copyForWhatsApp = (ev: any) => {
+    if (!ev) return
+
+    const isGlobalEvent = !ev.listId
+    const list = lists.find((l) => l.id === ev.listId)
+    const expectedMediunsIds = isGlobalEvent ? mediuns.map((m) => m.id) : list ? list.mediumIds : []
+
+    const presences = expectedMediunsIds
+      .map((mId) => {
+        const medium = mediuns.find((m) => m.id === mId)
+        if (!medium) return null
+        let status = 'Ausente'
+        if (ev.attendance?.[mId]) {
+          status = 'Presente'
+        } else if (ev.licencasList.some((l: any) => l.id === mId)) {
+          status = 'Licença'
+        }
+        return `${medium.nome.padEnd(20, ' ')} | ${status}`
+      })
+      .filter(Boolean)
+
+    const totalAtendimentos =
+      ev.status === 'fechado'
+        ? (ev.atendimentoPreferencial || 0) +
+          (ev.atendimentoNormal || 0) +
+          (ev.atendimentoPasse || 0)
+        : '-'
+
+    const text = `*RESUMO DO EVENTO*
+Data: ${ev.date.split('-').reverse().join('/')}
+Total de Médiuns Presentes: ${ev.presentes}
+Total de Médiuns Ausentes: ${ev.ausentes}
+Total de Médiuns em Licença: ${ev.licencasCount}
+
+*ATENDIMENTOS REALIZADOS*
+Preferencial: ${ev.status === 'fechado' ? ev.atendimentoPreferencial || 0 : '-'}
+Normal: ${ev.status === 'fechado' ? ev.atendimentoNormal || 0 : '-'}
+Passe: ${ev.status === 'fechado' ? ev.atendimentoPasse || 0 : '-'}
+Total de Atendimentos: ${totalAtendimentos}
+
+---
+*LISTA DE PRESENÇA*
+\`\`\`
+${presences.join('\n')}
+\`\`\``
+
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        toast.success('Resumo copiado para a área de transferência!')
+      })
+      .catch(() => {
+        toast.error('Não foi possível copiar o resumo.')
+      })
   }
 
   const renderDashboardContent = () => {
@@ -311,16 +427,20 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
     }
 
     const totalEvents = events.length
-    const numClosed = eventStats.length
+    const numClosed = closedEventStats.length
 
-    const avgPresentes = numClosed ? eventStats.reduce((a, c) => a + c.presentes, 0) / numClosed : 0
-    const avgAusentes = numClosed ? eventStats.reduce((a, c) => a + c.ausentes, 0) / numClosed : 0
+    const avgPresentes = numClosed
+      ? closedEventStats.reduce((a, c) => a + c.presentes, 0) / numClosed
+      : 0
+    const avgAusentes = numClosed
+      ? closedEventStats.reduce((a, c) => a + c.ausentes, 0) / numClosed
+      : 0
     const avgLicencas = numClosed
-      ? eventStats.reduce((a, c) => a + c.licencasCount, 0) / numClosed
+      ? closedEventStats.reduce((a, c) => a + c.licencasCount, 0) / numClosed
       : 0
 
-    const latestEvent = eventStats[0]
-    const prevEvent = eventStats[1]
+    const latestEvent = closedEventStats[0]
+    const prevEvent = closedEventStats[1]
 
     const getVariation = (current: number, previous: number) => {
       if (previous === 0) return current > 0 ? 100 : 0
@@ -597,271 +717,338 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
         </TabsContent>
 
         <TabsContent value="por-medium" className="space-y-6 focus-visible:outline-none">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="border-emerald-100 bg-emerald-50/30 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-emerald-800 flex items-center gap-2 text-lg">
-                  <Trophy className="w-5 h-5 text-emerald-600" /> Top 3 Mais Presentes
-                </CardTitle>
-                <CardDescription>Médiuns com maior assiduidade.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {topPresentes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Dados insuficientes.</p>
-                  ) : (
-                    topPresentes.map((m, i) => (
-                      <div
-                        key={m.id}
-                        className="flex items-center justify-between bg-white p-2 rounded-lg border border-emerald-100"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-emerald-700 w-4">{i + 1}º</span>
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={m.foto} />
-                            <AvatarFallback>{m.nome.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-sm truncate max-w-[120px]">
-                            {m.nome}
-                          </span>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="bg-emerald-50 text-emerald-700 border-emerald-200"
-                        >
-                          {(m.percentual ?? 0).toFixed(0)}%
-                        </Badge>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-rose-100 bg-rose-50/30 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-rose-800 flex items-center gap-2 text-lg">
-                  <AlertTriangle className="w-5 h-5 text-rose-600" /> Top 3 Mais Faltantes
-                </CardTitle>
-                <CardDescription>Médiuns com maior número de faltas.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {topFaltantes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Dados insuficientes.</p>
-                  ) : (
-                    topFaltantes.map((m, i) => (
-                      <div
-                        key={m.id}
-                        className="flex items-center justify-between bg-white p-2 rounded-lg border border-rose-100"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-rose-700 w-4">{i + 1}º</span>
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={m.foto} />
-                            <AvatarFallback>{m.nome.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-sm truncate max-w-[120px]">
-                            {m.nome}
-                          </span>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="bg-rose-50 text-rose-700 border-rose-200"
-                        >
-                          {m.faltas} faltas
-                        </Badge>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="border-purple-100 shadow-sm">
-            <CardHeader className="bg-purple-50/40 border-b border-purple-50">
-              <CardTitle className="text-purple-900 flex items-center gap-2">
-                <Users className="w-5 h-5 text-purple-600" /> Relatório Geral de Médiuns
-              </CardTitle>
-              <CardDescription>Total de Médiuns: {mediuns.length}</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-purple-50/20">
-                    <TableRow>
-                      <TableHead className="font-semibold text-purple-900">Médium</TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center hidden md:table-cell">
-                        Eventos Esperados
-                      </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center">
-                        Presenças
-                      </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center">
-                        Licenças
-                      </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell">
-                        Faltas
-                      </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-right">
-                        Assiduidade (%)
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mediumStats.map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3 min-w-[120px]">
-                            <Avatar className="w-8 h-8">
-                              <AvatarImage src={m.foto} />
-                              <AvatarFallback>{m.nome.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium whitespace-nowrap">{m.nome}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center hidden md:table-cell">
-                          {m.totalEvents}
-                        </TableCell>
-                        <TableCell className="text-center text-emerald-600 font-medium">
-                          {m.presencas}
-                        </TableCell>
-                        <TableCell className="text-center text-amber-600 font-medium">
-                          {m.licencasCount}
-                        </TableCell>
-                        <TableCell className="text-center text-rose-600 font-medium hidden sm:table-cell">
-                          {m.faltas}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {m.percentual === null ? (
-                            <span className="text-muted-foreground font-medium text-sm">N/A</span>
-                          ) : (
+          {isLoading ? (
+            <TableSkeleton />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-emerald-100 bg-emerald-50/30 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-emerald-800 flex items-center gap-2 text-lg">
+                      <Trophy className="w-5 h-5 text-emerald-600" /> Top 3 Mais Presentes
+                    </CardTitle>
+                    <CardDescription>Médiuns com maior assiduidade.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {topPresentes.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Dados insuficientes.</p>
+                      ) : (
+                        topPresentes.map((m, i) => (
+                          <div
+                            key={m.id}
+                            className="flex items-center justify-between bg-white p-2 rounded-lg border border-emerald-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-emerald-700 w-4">{i + 1}º</span>
+                              <Avatar className="w-8 h-8">
+                                <AvatarImage src={m.foto} />
+                                <AvatarFallback>{m.nome.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium text-sm truncate max-w-[120px]">
+                                {m.nome}
+                              </span>
+                            </div>
                             <Badge
                               variant="outline"
-                              className={
-                                m.percentual >= 75
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : m.percentual >= 50
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                    : 'bg-rose-50 text-rose-700 border-rose-200'
-                              }
+                              className="bg-emerald-50 text-emerald-700 border-emerald-200"
                             >
-                              {m.percentual.toFixed(1)}%
+                              {(m.percentual ?? 0).toFixed(0)}%
                             </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {mediumStats.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          Nenhum dado disponível.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-rose-100 bg-rose-50/30 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-rose-800 flex items-center gap-2 text-lg">
+                      <AlertTriangle className="w-5 h-5 text-rose-600" /> Top 3 Mais Faltantes
+                    </CardTitle>
+                    <CardDescription>Médiuns com maior número de faltas.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {topFaltantes.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Dados insuficientes.</p>
+                      ) : (
+                        topFaltantes.map((m, i) => (
+                          <div
+                            key={m.id}
+                            className="flex items-center justify-between bg-white p-2 rounded-lg border border-rose-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-rose-700 w-4">{i + 1}º</span>
+                              <Avatar className="w-8 h-8">
+                                <AvatarImage src={m.foto} />
+                                <AvatarFallback>{m.nome.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium text-sm truncate max-w-[120px]">
+                                {m.nome}
+                              </span>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className="bg-rose-50 text-rose-700 border-rose-200"
+                            >
+                              {m.faltas} faltas
+                            </Badge>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
+
+              <Card className="border-purple-100 shadow-sm">
+                <CardHeader className="bg-purple-50/40 border-b border-purple-50">
+                  <CardTitle className="text-purple-900 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-purple-600" /> Relatório Geral de Médiuns
+                  </CardTitle>
+                  <CardDescription>Total de Médiuns: {mediuns.length}</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-purple-50/20">
+                        <TableRow>
+                          <TableHead className="font-semibold text-purple-900">Médium</TableHead>
+                          <TableHead className="font-semibold text-purple-900 text-center hidden md:table-cell">
+                            Eventos Esperados
+                          </TableHead>
+                          <TableHead className="font-semibold text-purple-900 text-center">
+                            Presenças
+                          </TableHead>
+                          <TableHead className="font-semibold text-purple-900 text-center">
+                            Licenças
+                          </TableHead>
+                          <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell">
+                            Faltas
+                          </TableHead>
+                          <TableHead className="font-semibold text-purple-900 text-right">
+                            Assiduidade (%)
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {mediumStats.map((m) => (
+                          <TableRow key={m.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3 min-w-[120px]">
+                                <Avatar className="w-8 h-8">
+                                  <AvatarImage src={m.foto} />
+                                  <AvatarFallback>{m.nome.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium whitespace-nowrap">{m.nome}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center hidden md:table-cell">
+                              {m.totalEvents}
+                            </TableCell>
+                            <TableCell className="text-center text-emerald-600 font-medium">
+                              {m.presencas}
+                            </TableCell>
+                            <TableCell className="text-center text-amber-600 font-medium">
+                              {m.licencasCount}
+                            </TableCell>
+                            <TableCell className="text-center text-rose-600 font-medium hidden sm:table-cell">
+                              {m.faltas}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {m.percentual === null ? (
+                                <span className="text-muted-foreground font-medium text-sm">
+                                  N/A
+                                </span>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    m.percentual >= 75
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : m.percentual >= 50
+                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                                  }
+                                >
+                                  {m.percentual.toFixed(1)}%
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {mediumStats.length === 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={6}
+                              className="text-center py-8 text-muted-foreground"
+                            >
+                              Nenhum dado disponível.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="por-evento" className="focus-visible:outline-none">
-          <Card className="border-purple-100 shadow-sm">
-            <CardHeader className="bg-purple-50/40 border-b border-purple-50">
-              <CardTitle className="text-purple-900 flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-purple-600" /> Histórico de Eventos Realizados
-              </CardTitle>
-              <CardDescription>Eventos com status "fechado".</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-purple-50/20">
-                    <TableRow>
-                      <TableHead className="font-semibold text-purple-900 whitespace-nowrap">
-                        Evento
-                      </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center hidden md:table-cell">
-                        Total Esperados
-                      </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center">
-                        Presentes
-                      </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center">
-                        Licenças
-                      </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell">
-                        Ausentes
-                      </TableHead>
-                      <TableHead className="font-semibold text-purple-900 text-right">
-                        Comparecimento (%)
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {eventStats.map((ev) => (
-                      <TableRow
-                        key={ev.id}
-                        className="cursor-pointer hover:bg-purple-50/30 transition-colors"
-                        onClick={() => setSelectedEventId(ev.id)}
-                      >
-                        <TableCell>
-                          <div className="font-bold text-purple-900 whitespace-nowrap">
-                            {ev.name}
-                          </div>
-                          <div className="font-medium text-slate-700 whitespace-nowrap text-sm mt-1">
-                            {ev.date.split('-').reverse().join('/')}
-                          </div>
-                          <div className="text-xs text-muted-foreground whitespace-nowrap">
-                            {ev.location}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center hidden md:table-cell">
-                          {ev.totalEsperados}
-                        </TableCell>
-                        <TableCell className="text-center text-emerald-600 font-medium">
-                          {ev.presentes}
-                        </TableCell>
-                        <TableCell className="text-center text-amber-600 font-medium">
-                          {ev.licencasCount}
-                        </TableCell>
-                        <TableCell className="text-center text-rose-600 font-medium hidden sm:table-cell">
-                          {ev.ausentes}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {ev.percentual === null ? (
-                            <span className="text-muted-foreground font-medium text-sm">N/A</span>
-                          ) : (
+          {isLoading ? (
+            <TableSkeleton />
+          ) : (
+            <Card className="border-purple-100 shadow-sm">
+              <CardHeader className="bg-purple-50/40 border-b border-purple-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4">
+                <div>
+                  <CardTitle className="text-purple-900 flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-purple-600" /> Histórico de Eventos
+                  </CardTitle>
+                  <CardDescription>Todos os eventos e suas métricas.</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportCSV}
+                  className="w-full sm:w-auto bg-white border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+                >
+                  <Download className="w-4 h-4 mr-2" /> Exportar CSV
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-purple-50/20">
+                      <TableRow>
+                        <TableHead className="font-semibold text-purple-900 whitespace-nowrap">
+                          Evento
+                        </TableHead>
+                        <TableHead className="font-semibold text-purple-900 text-center whitespace-nowrap">
+                          Status
+                        </TableHead>
+                        <TableHead className="font-semibold text-purple-900 text-center whitespace-nowrap">
+                          Preferencial
+                        </TableHead>
+                        <TableHead className="font-semibold text-purple-900 text-center whitespace-nowrap">
+                          Normal
+                        </TableHead>
+                        <TableHead className="font-semibold text-purple-900 text-center whitespace-nowrap">
+                          Passe
+                        </TableHead>
+                        <TableHead className="font-semibold text-purple-900 text-center hidden md:table-cell whitespace-nowrap">
+                          Esperados
+                        </TableHead>
+                        <TableHead className="font-semibold text-purple-900 text-center whitespace-nowrap">
+                          Presentes
+                        </TableHead>
+                        <TableHead className="font-semibold text-purple-900 text-center whitespace-nowrap">
+                          Licenças
+                        </TableHead>
+                        <TableHead className="font-semibold text-purple-900 text-center hidden sm:table-cell whitespace-nowrap">
+                          Ausentes
+                        </TableHead>
+                        <TableHead className="font-semibold text-purple-900 text-right whitespace-nowrap">
+                          Freq. (%)
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {eventStats.map((ev) => (
+                        <TableRow
+                          key={ev.id}
+                          className="cursor-pointer hover:bg-purple-50/30 transition-colors"
+                          onClick={() => setSelectedEventId(ev.id)}
+                        >
+                          <TableCell>
+                            <div className="font-bold text-purple-900 whitespace-nowrap">
+                              {ev.name}
+                            </div>
+                            <div className="font-medium text-slate-700 whitespace-nowrap text-sm mt-1">
+                              {ev.date.split('-').reverse().join('/')}
+                            </div>
+                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                              {ev.location}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
                             <Badge
                               variant="outline"
                               className={
-                                ev.percentual >= 75
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : ev.percentual >= 50
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                ev.status === 'fechado'
+                                  ? 'bg-slate-100 text-slate-700'
+                                  : ev.status === 'em andamento'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               }
                             >
-                              {ev.percentual.toFixed(1)}%
+                              {ev.status === 'fechado'
+                                ? 'Fechado'
+                                : ev.status === 'em andamento'
+                                  ? 'Em Andamento'
+                                  : 'Planejado'}
                             </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {eventStats.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          Nenhum evento fechado.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                          </TableCell>
+                          <TableCell className="text-center font-medium">
+                            {ev.status === 'fechado' ? ev.atendimentoPreferencial || 0 : '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-medium">
+                            {ev.status === 'fechado' ? ev.atendimentoNormal || 0 : '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-medium text-purple-600">
+                            {ev.status === 'fechado' ? ev.atendimentoPasse || 0 : '-'}
+                          </TableCell>
+                          <TableCell className="text-center hidden md:table-cell">
+                            {ev.totalEsperados}
+                          </TableCell>
+                          <TableCell className="text-center text-emerald-600 font-medium">
+                            {ev.presentes}
+                          </TableCell>
+                          <TableCell className="text-center text-amber-600 font-medium">
+                            {ev.licencasCount}
+                          </TableCell>
+                          <TableCell className="text-center text-rose-600 font-medium hidden sm:table-cell">
+                            {ev.ausentes}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {ev.percentual === null ? (
+                              <span className="text-muted-foreground font-medium text-sm">N/A</span>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className={
+                                  ev.percentual >= 75
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : ev.percentual >= 50
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }
+                              >
+                                {ev.percentual.toFixed(1)}%
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {eventStats.length === 0 && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={10}
+                            className="text-center py-8 text-muted-foreground"
+                          >
+                            Nenhum evento registrado.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -874,16 +1061,50 @@ export function RelatoriosTab({ groupId, mediuns }: { groupId: string; mediuns: 
           >
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="text-purple-900 text-xl">
-                  {selectedEventData?.name}
+                <DialogTitle className="text-purple-900 text-xl flex items-center gap-2">
+                  <FileText className="w-5 h-5" /> Relatório do Evento
                 </DialogTitle>
                 <DialogDescription>
-                  {selectedEventData && selectedEventData.date.split('-').reverse().join('/')} -{' '}
-                  {selectedEventData?.location}
+                  {selectedEventData?.name} —{' '}
+                  {selectedEventData && selectedEventData.date.split('-').reverse().join('/')}
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <div className="flex items-center justify-between mt-4">
+                <h3 className="font-semibold text-slate-800">Resumo e Métricas</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyForWhatsApp(selectedEventData)}
+                  className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800"
+                >
+                  <Copy className="w-4 h-4 mr-2" /> Copiar para WhatsApp
+                </Button>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-2 font-mono text-sm text-slate-800 whitespace-pre-wrap">
+                {`RESUMO DO EVENTO
+Data: ${selectedEventData?.date.split('-').reverse().join('/')}
+Total de Médiuns Presentes: ${selectedEventData?.presentes}
+Total de Médiuns Ausentes: ${selectedEventData?.ausentes}
+Total de Médiuns em Licença: ${selectedEventData?.licencasCount}
+
+ATENDIMENTOS REALIZADOS
+Preferencial: ${selectedEventData?.status === 'fechado' ? selectedEventData?.atendimentoPreferencial || 0 : '-'}
+Normal: ${selectedEventData?.status === 'fechado' ? selectedEventData?.atendimentoNormal || 0 : '-'}
+Passe: ${selectedEventData?.status === 'fechado' ? selectedEventData?.atendimentoPasse || 0 : '-'}
+Total de Atendimentos: ${
+                  selectedEventData?.status === 'fechado'
+                    ? (selectedEventData?.atendimentoPreferencial || 0) +
+                      (selectedEventData?.atendimentoNormal || 0) +
+                      (selectedEventData?.atendimentoPasse || 0)
+                    : '-'
+                }
+
+---`}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 <Card className="border-rose-100 shadow-sm">
                   <CardHeader className="bg-rose-50/50 pb-3 border-b border-rose-50">
                     <CardTitle className="text-rose-800 text-base flex items-center justify-between">
