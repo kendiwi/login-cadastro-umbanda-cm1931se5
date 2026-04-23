@@ -53,6 +53,7 @@ import {
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { toast } from 'sonner'
+import { EventSummaryModal } from '@/components/EventSummaryModal'
 
 const TrendIndicator = ({
   value,

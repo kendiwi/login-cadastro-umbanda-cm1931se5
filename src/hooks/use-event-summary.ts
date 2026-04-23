@@ -19,8 +19,7 @@ export function useEventSummary(eventId?: string) {
       console.error(err)
       setError(true)
       toast({
-        title: 'Erro',
-        description: 'Erro ao carregar relatorio. Tente novamente.',
+        title: 'Erro ao carregar relatório. Tente novamente.',
         variant: 'destructive',
       })
     } finally {
