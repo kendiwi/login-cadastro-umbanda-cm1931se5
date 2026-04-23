@@ -53,18 +53,22 @@ export function EventSummaryModal({ eventId, isOpen, onClose }: EventSummaryModa
     if (data.ausentesList && data.ausentesList.length > 0) {
       text += `AUSENTES\n`
       data.ausentesList.forEach((a) => {
-        text += `- ${a.nome}\n`
+        text += `❌ ${a.nome}\n`
       })
       text += `\n`
+    } else {
+      text += `AUSENTES\nNenhum registro\n\n`
     }
 
     if (data.licencasList && data.licencasList.length > 0) {
       text += `EM LICENÇA\n`
       data.licencasList.forEach((l) => {
         const returnDate = formatDate(l.dataFim)
-        text += `- ${l.nome} - ${l.justificativa} - ${returnDate}\n`
+        text += `📋 ${l.nome} - ${l.justificativa} - Retorno em ${returnDate}\n`
       })
       text += `\n`
+    } else {
+      text += `EM LICENÇA\nNenhum registro\n\n`
     }
 
     if (data.description) {
@@ -75,7 +79,7 @@ export function EventSummaryModal({ eventId, isOpen, onClose }: EventSummaryModa
 
     navigator.clipboard.writeText(text).then(() => {
       toast({
-        title: 'Copiado para a área de transferência',
+        title: 'Copiado para a area de transferencia',
       })
     })
   }
@@ -114,7 +118,7 @@ export function EventSummaryModal({ eventId, isOpen, onClose }: EventSummaryModa
     const totalAtend = data.atendimentoPreferencial + data.atendimentoNormal + data.atendimentoPasse
 
     return (
-      <div className="p-6 overflow-y-auto max-h-[70vh] bg-white space-y-3">
+      <div className="p-6 overflow-y-auto max-h-[400px] bg-white space-y-3">
         <div className="bg-slate-50 p-4 rounded-lg">
           <h4 className="font-bold text-slate-800 mb-3 text-sm">RESUMO DO EVENTO</h4>
           <div className="grid grid-cols-2 gap-2 text-sm text-slate-800">
@@ -222,38 +226,39 @@ export function EventSummaryModal({ eventId, isOpen, onClose }: EventSummaryModa
           </div>
         )}
 
-        {data.ausentesList && data.ausentesList.length > 0 && (
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <h4 className="font-bold text-slate-800 mb-3 text-sm">AUSENTES</h4>
+        <div className="bg-slate-50 p-4 rounded-lg">
+          <h4 className="font-bold text-slate-800 mb-3 text-sm">AUSENTES</h4>
+          {!data.ausentesList || data.ausentesList.length === 0 ? (
+            <p className="text-sm text-slate-400">Nenhum registro</p>
+          ) : (
             <ul className="text-sm text-slate-700 space-y-1">
               {data.ausentesList.map((a, idx) => (
-                <li key={idx} className="flex items-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2 shrink-0"></span>
+                <li key={idx} className="flex items-start">
+                  <span className="mr-2 shrink-0">❌</span>
                   {a.nome}
                 </li>
               ))}
             </ul>
-          </div>
-        )}
+          )}
+        </div>
 
-        {data.licencasList && data.licencasList.length > 0 && (
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <h4 className="font-bold text-slate-800 mb-3 text-sm">EM LICENÇA</h4>
+        <div className="bg-slate-50 p-4 rounded-lg">
+          <h4 className="font-bold text-slate-800 mb-3 text-sm">EM LICENÇA</h4>
+          {!data.licencasList || data.licencasList.length === 0 ? (
+            <p className="text-sm text-slate-400">Nenhum registro</p>
+          ) : (
             <ul className="text-sm text-slate-700 space-y-2">
               {data.licencasList.map((l, idx) => (
-                <li key={idx} className="flex flex-col">
-                  <div className="flex items-center font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2 shrink-0"></span>
-                    {l.nome}
-                  </div>
-                  <div className="pl-3.5 text-xs text-slate-500 mt-0.5">
-                    Motivo: {l.justificativa} | Retorno: {formatDate(l.dataFim)}
-                  </div>
+                <li key={idx} className="flex items-start">
+                  <span className="mr-2 shrink-0">📋</span>
+                  <span>
+                    {l.nome} - {l.justificativa} - Retorno em {formatDate(l.dataFim)}
+                  </span>
                 </li>
               ))}
             </ul>
-          </div>
-        )}
+          )}
+        </div>
 
         {data.description && (
           <div className="bg-slate-50 p-4 rounded-lg">
@@ -267,7 +272,7 @@ export function EventSummaryModal({ eventId, isOpen, onClose }: EventSummaryModa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[90%] sm:w-[500px] sm:max-w-[500px] p-0 overflow-hidden data-[state=open]:duration-200 data-[state=closed]:duration-150">
+      <DialogContent className="w-[90%] sm:w-[600px] sm:max-w-[600px] p-0 overflow-hidden data-[state=open]:duration-200 data-[state=closed]:duration-150">
         <DialogHeader className="p-6 pb-4 border-b bg-white">
           <DialogTitle className="text-slate-900 flex items-center font-bold text-xl">
             <FileText className="w-6 h-6 mr-2" /> Resumo do Evento
@@ -275,7 +280,14 @@ export function EventSummaryModal({ eventId, isOpen, onClose }: EventSummaryModa
         </DialogHeader>
         {renderContent()}
         {data && (
-          <div className="p-4 border-t flex justify-end space-x-2 bg-white">
+          <div className="p-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:space-x-2 bg-white">
+            <Button
+              variant="secondary"
+              onClick={onClose}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 w-full sm:w-auto"
+            >
+              Fechar
+            </Button>
             <Button
               onClick={handleCopy}
               className="bg-[#25D366] hover:bg-[#128C7E] text-white w-full sm:w-auto"
