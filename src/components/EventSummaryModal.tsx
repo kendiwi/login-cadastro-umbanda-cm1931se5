@@ -37,17 +37,34 @@ export function EventSummaryModal({ eventId, isOpen, onClose }: EventSummaryModa
     const percAbsent = total > 0 ? Math.round((data.ausentes / total) * 100) : 0
     const percLicense = total > 0 ? Math.round((data.emLicenca / total) * 100) : 0
 
-    let text = `\`\`\`\nRESUMO DO EVENTO\n\n`
+    let text = `\`\`\`\nRESUMO DO EVENTO\n`
     text += `Data: ${evDate}\nHorário: ${data.time}\nLocal: ${data.location}\nCoordenador: ${data.ownerName}\n\n`
 
-    text += `PARTICIPAÇÃO\nPresentes: ${data.presentes}\nAusentes: ${data.ausentes}\nEm Licença: ${data.emLicenca}\nConvidados: ${data.convidados}\n\n`
+    text += `PARTICIPAÇÃO\n✅ Presentes: ${data.presentes}\n❌ Ausentes: ${data.ausentes}\n📋 Em Licença: ${data.emLicenca}\n🎫 Convidados: ${data.convidados}\n\n`
 
     text += `TAXA DE PRESENÇA\nPresença: ${percPresent}%\nAusência: ${percAbsent}%\nLicença: ${percLicense}%\n\n`
 
     if (data.status === 'fechado') {
       const totalAtend =
         data.atendimentoPreferencial + data.atendimentoNormal + data.atendimentoPasse
-      text += `ATENDIMENTOS REALIZADOS\nPreferencial: ${data.atendimentoPreferencial}\nNormal: ${data.atendimentoNormal}\nPasse: ${data.atendimentoPasse}\nTotal: ${totalAtend}\n\n`
+      text += `ATENDIMENTOS REALIZADOS\n👑 Preferencial: ${data.atendimentoPreferencial}\n🤝 Normal: ${data.atendimentoNormal}\n🎁 Passe: ${data.atendimentoPasse}\n💫 Total: ${totalAtend}\n\n`
+    }
+
+    if (data.ausentesList && data.ausentesList.length > 0) {
+      text += `AUSENTES\n`
+      data.ausentesList.forEach((a) => {
+        text += `- ${a.nome}\n`
+      })
+      text += `\n`
+    }
+
+    if (data.licencasList && data.licencasList.length > 0) {
+      text += `EM LICENÇA\n`
+      data.licencasList.forEach((l) => {
+        const returnDate = formatDate(l.dataFim)
+        text += `- ${l.nome} - ${l.justificativa} - ${returnDate}\n`
+      })
+      text += `\n`
     }
 
     if (data.description) {
@@ -202,6 +219,39 @@ export function EventSummaryModal({ eventId, isOpen, onClose }: EventSummaryModa
                 <span className="font-bold text-blue-600">{totalAtend}</span>
               </div>
             </div>
+          </div>
+        )}
+
+        {data.ausentesList && data.ausentesList.length > 0 && (
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <h4 className="font-bold text-slate-800 mb-3 text-sm">AUSENTES</h4>
+            <ul className="text-sm text-slate-700 space-y-1">
+              {data.ausentesList.map((a, idx) => (
+                <li key={idx} className="flex items-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2 shrink-0"></span>
+                  {a.nome}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {data.licencasList && data.licencasList.length > 0 && (
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <h4 className="font-bold text-slate-800 mb-3 text-sm">EM LICENÇA</h4>
+            <ul className="text-sm text-slate-700 space-y-2">
+              {data.licencasList.map((l, idx) => (
+                <li key={idx} className="flex flex-col">
+                  <div className="flex items-center font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2 shrink-0"></span>
+                    {l.nome}
+                  </div>
+                  <div className="pl-3.5 text-xs text-slate-500 mt-0.5">
+                    Motivo: {l.justificativa} | Retorno: {formatDate(l.dataFim)}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

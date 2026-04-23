@@ -15,6 +15,8 @@ export interface EventSummaryData {
   atendimentoNormal: number
   atendimentoPasse: number
   description: string
+  ausentesList: Array<{ nome: string }>
+  licencasList: Array<{ nome: string; justificativa: string; dataFim: string }>
 }
 
 export async function getEventSummary(eventId: string): Promise<EventSummaryData> {
@@ -26,6 +28,11 @@ export async function getEventSummary(eventId: string): Promise<EventSummaryData
     filter: `evento_id = "${eventId}"`,
   })
 
+  const mediunsList = await pb.collection('mediuns').getFullList({
+    filter: `grupo_id = "${event.grupo_id}"`,
+  })
+  const mediumMap = new Map(mediunsList.map((m) => [m.id, m]))
+
   let expectedMediumIds: string[] = []
   if (event.lista_id) {
     const listaMediuns = await pb.collection('lista_mediuns').getFullList({
@@ -33,10 +40,7 @@ export async function getEventSummary(eventId: string): Promise<EventSummaryData
     })
     expectedMediumIds = listaMediuns.map((lm) => lm.medium_id)
   } else {
-    const mediuns = await pb.collection('mediuns').getFullList({
-      filter: `grupo_id = "${event.grupo_id}" && ativo = true`,
-    })
-    expectedMediumIds = mediuns.map((m) => m.id)
+    expectedMediumIds = mediunsList.filter((m) => m.ativo).map((m) => m.id)
   }
 
   const eventDateStr = event.data.split(' ')[0]
@@ -53,23 +57,35 @@ export async function getEventSummary(eventId: string): Promise<EventSummaryData
     presencaMap.set(p.medium_id, p.presente)
   })
 
-  const licencasMap = new Set<string>()
-  licencas.forEach((l) => {
-    licencasMap.add(l.medium_id)
-  })
+  const ausentesList: Array<{ nome: string }> = []
+  const licencasList: Array<{ nome: string; justificativa: string; dataFim: string }> = []
 
   expectedMediumIds.forEach((mId) => {
     const isPresent = presencaMap.get(mId)
-    const isOnLeave = licencasMap.has(mId)
+    const licenca = licencas.find((l) => l.medium_id === mId)
+    const medium = mediumMap.get(mId)
 
     if (isPresent) {
       presentes++
-    } else if (isOnLeave) {
+    } else if (licenca) {
       emLicenca++
+      if (medium) {
+        licencasList.push({
+          nome: medium.nome,
+          justificativa: licenca.justificativa || 'Sem justificativa',
+          dataFim: licenca.data_fim,
+        })
+      }
     } else {
       ausentes++
+      if (medium) {
+        ausentesList.push({ nome: medium.nome })
+      }
     }
   })
+
+  ausentesList.sort((a, b) => a.nome.localeCompare(b.nome))
+  licencasList.sort((a, b) => a.nome.localeCompare(b.nome))
 
   let convidados = 0
   const expectedSet = new Set(expectedMediumIds)
@@ -94,5 +110,7 @@ export async function getEventSummary(eventId: string): Promise<EventSummaryData
     atendimentoNormal: event.atendimento_normal || 0,
     atendimentoPasse: event.atendimento_passe || 0,
     description: event.descricao || '',
+    ausentesList,
+    licencasList,
   }
 }
