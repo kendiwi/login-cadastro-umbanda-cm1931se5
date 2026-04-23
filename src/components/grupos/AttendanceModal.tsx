@@ -20,8 +20,9 @@ import { GiraEvent } from '@/hooks/use-events'
 import { Medium } from '@/hooks/use-mediuns'
 import { GroupingList } from '@/hooks/use-grouping-lists'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, MapPin } from 'lucide-react'
+import { Calendar, MapPin, WifiOff, Loader2, RefreshCw } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useOfflineSync } from '@/hooks/use-offline-sync'
 import { cn } from '@/lib/utils'
 
 interface AttendanceModalProps {
@@ -50,6 +51,15 @@ export function AttendanceModal({
 }: AttendanceModalProps) {
   const [attendance, setAttendance] = useState<Record<string, boolean>>({})
   const isMobile = useIsMobile()
+  const {
+    isOnline,
+    pendingChanges,
+    isSyncing,
+    savingIds,
+    savePresence,
+    triggerSync,
+    manualSyncRequired,
+  } = useOfflineSync(event?.id)
 
   useEffect(() => {
     if (isOpen && event) {
@@ -68,7 +78,11 @@ export function AttendanceModal({
 
   const handleToggle = (mediumId: string, present: boolean) => {
     if (isClosed) return
-    setAttendance((prev) => ({ ...prev, [mediumId]: present }))
+    const prev = attendance[mediumId]
+    setAttendance((a) => ({ ...a, [mediumId]: present }))
+    savePresence(mediumId, present, () => {
+      setAttendance((a) => ({ ...a, [mediumId]: prev || false }))
+    })
   }
 
   const handleSave = (closeEvent: boolean) => {
@@ -77,15 +91,28 @@ export function AttendanceModal({
   }
 
   const TitleContent = () => (
-    <>
-      <span className="truncate pr-8">{event.name} - Lista</span>
+    <div className="flex items-center flex-wrap gap-2 pr-8">
+      <span className="truncate">{event.name} - Lista</span>
       <Badge
         variant="outline"
         className={isClosed ? 'bg-slate-100 text-slate-700' : 'bg-purple-100 text-purple-700'}
       >
         {event.status.toUpperCase()}
       </Badge>
-    </>
+      {!isOnline && (
+        <Badge variant="destructive" className="flex items-center gap-1 whitespace-nowrap">
+          <WifiOff className="w-3 h-3" /> Offline
+        </Badge>
+      )}
+      {pendingChanges.length > 0 && (
+        <Badge
+          variant="secondary"
+          className="bg-amber-100 text-amber-800 border-amber-200 whitespace-nowrap"
+        >
+          {pendingChanges.length} pendente{pendingChanges.length !== 1 ? 's' : ''}
+        </Badge>
+      )}
+    </div>
   )
 
   const SubtitleContent = () => (
@@ -160,20 +187,29 @@ export function AttendanceModal({
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span
-                  className={cn(
-                    'text-sm font-medium',
-                    attendance[m.id] && !isEmLicenca ? 'text-emerald-600' : 'text-slate-400',
-                  )}
-                >
-                  {attendance[m.id] ? 'Presente' : 'Ausente'}
-                </span>
-                <Switch
-                  checked={!!attendance[m.id]}
-                  onCheckedChange={(c) => handleToggle(m.id, c)}
-                  disabled={isClosed || isEmLicenca}
-                  className="data-[state=checked]:bg-emerald-500"
-                />
+                {savingIds.has(m.id) ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-slate-400">Salvando...</span>
+                    <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                  </div>
+                ) : (
+                  <>
+                    <span
+                      className={cn(
+                        'text-sm font-medium',
+                        attendance[m.id] && !isEmLicenca ? 'text-emerald-600' : 'text-slate-400',
+                      )}
+                    >
+                      {attendance[m.id] ? 'Presente' : 'Ausente'}
+                    </span>
+                    <Switch
+                      checked={!!attendance[m.id]}
+                      onCheckedChange={(c) => handleToggle(m.id, c)}
+                      disabled={isClosed || isEmLicenca}
+                      className="data-[state=checked]:bg-emerald-500"
+                    />
+                  </>
+                )}
               </div>
             </div>
           )
@@ -193,14 +229,22 @@ export function AttendanceModal({
         {isClosed ? 'Fechar' : 'Cancelar'}
       </Button>
       {!isClosed && (
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button
-            variant="secondary"
-            onClick={() => handleSave(false)}
-            className="w-full sm:w-auto bg-purple-100 hover:bg-purple-200 text-purple-700"
-          >
-            Salvar Presença
-          </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
+          {manualSyncRequired && pendingChanges.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={triggerSync}
+              disabled={isSyncing || !isOnline}
+              className="w-full sm:w-auto border-amber-200 text-amber-700 hover:bg-amber-50"
+            >
+              {isSyncing ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Sincronizar Manualmente
+            </Button>
+          )}
           <Button
             onClick={() => handleSave(true)}
             className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
@@ -229,10 +273,10 @@ export function AttendanceModal({
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DrawerContent className="max-h-[90dvh] flex flex-col p-0 gap-0 overflow-hidden bg-slate-50/30">
           <DrawerHeader className="shrink-0 text-left p-4 pb-4 border-b border-purple-100 bg-white">
-            <DrawerTitle className="text-xl text-purple-900 flex items-center justify-between">
+            <DrawerTitle className="text-xl text-purple-900">
               <TitleContent />
             </DrawerTitle>
-            <div className="text-sm text-muted-foreground flex flex-col sm:flex-row gap-1 sm:gap-4 mt-2">
+            <div className="text-sm text-muted-foreground flex flex-col sm:flex-row gap-1 sm:gap-4 mt-4">
               <SubtitleContent />
             </div>
           </DrawerHeader>
@@ -251,10 +295,10 @@ export function AttendanceModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[600px] max-h-[90dvh] flex flex-col p-0 gap-0 overflow-hidden bg-slate-50/30">
         <DialogHeader className="shrink-0 p-6 pb-4 border-b border-purple-100 bg-white">
-          <DialogTitle className="text-xl text-purple-900 flex items-center justify-between pr-8">
+          <DialogTitle className="text-xl text-purple-900">
             <TitleContent />
           </DialogTitle>
-          <div className="text-sm text-muted-foreground flex items-center gap-4 mt-2">
+          <div className="text-sm text-muted-foreground flex items-center gap-4 mt-4">
             <SubtitleContent />
           </div>
         </DialogHeader>
