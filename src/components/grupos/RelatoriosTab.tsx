@@ -31,6 +31,7 @@ import {
   LayoutDashboard,
   Download,
   Copy,
+  FileText,
 } from 'lucide-react'
 import {
   Dialog,
