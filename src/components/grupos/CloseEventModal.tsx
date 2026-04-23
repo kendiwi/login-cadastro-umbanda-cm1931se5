@@ -12,8 +12,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { GiraEvent } from '@/hooks/use-events'
 import { toast } from 'sonner'
-import { Check, X } from 'lucide-react'
+import { Check, X, Info } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface CloseEventModalProps {
   isOpen: boolean
@@ -101,15 +102,15 @@ export function CloseEventModal({ isOpen, onClose, event, onConfirm }: CloseEven
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !isSubmitting && onClose()}>
-      <DialogContent className="sm:max-w-[600px] w-[95vw] mx-auto rounded-lg">
+      <DialogContent className="w-[90%] sm:w-[400px] sm:max-w-[400px] p-4 sm:p-6 mx-auto rounded-lg data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:duration-200">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Estatísticas do Evento</DialogTitle>
-          <DialogDescription className="text-muted-foreground mt-2">
-            Preencha os dados de atendimento para fechar o evento oficialmente.
+          <DialogTitle className="text-xl font-bold text-slate-900">Finalizar Evento</DialogTitle>
+          <DialogDescription className="text-muted-foreground mt-1">
+            Registre as métricas de atendimento
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-5 py-4">
+        <div className="flex flex-col gap-4 py-4">
           {isLoadingData ? (
             <>
               <div className="space-y-2">
@@ -127,10 +128,20 @@ export function CloseEventModal({ isOpen, onClose, event, onConfirm }: CloseEven
             </>
           ) : (
             <>
-              <div className="space-y-2 flex flex-col">
-                <Label htmlFor="pref" className="font-medium text-slate-700">
-                  Quantidade de Atendimento Preferencial
-                </Label>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="pref" className="font-medium text-slate-700">
+                    Quantidade de Atendimento Preferencial
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button" tabIndex={-1}>
+                      <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 transition-colors" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Atendimento prioritário para médiuns com restrições</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   id="pref"
                   type="number"
@@ -141,12 +152,23 @@ export function CloseEventModal({ isOpen, onClose, event, onConfirm }: CloseEven
                   className={prefError ? 'border-red-500 focus-visible:ring-red-500' : ''}
                   placeholder="Ex: 5"
                 />
-                {prefError && <p className="text-red-500 text-xs font-medium mt-1">{prefError}</p>}
+                {prefError && <p className="text-red-500 text-xs font-medium">{prefError}</p>}
               </div>
-              <div className="space-y-2 flex flex-col">
-                <Label htmlFor="normal" className="font-medium text-slate-700">
-                  Quantidade de Atendimento Normal
-                </Label>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="normal" className="font-medium text-slate-700">
+                    Quantidade de Atendimento Normal
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button" tabIndex={-1}>
+                      <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 transition-colors" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Atendimento padrão para médiuns regulares</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   id="normal"
                   type="number"
@@ -157,14 +179,23 @@ export function CloseEventModal({ isOpen, onClose, event, onConfirm }: CloseEven
                   className={normalError ? 'border-red-500 focus-visible:ring-red-500' : ''}
                   placeholder="Ex: 20"
                 />
-                {normalError && (
-                  <p className="text-red-500 text-xs font-medium mt-1">{normalError}</p>
-                )}
+                {normalError && <p className="text-red-500 text-xs font-medium">{normalError}</p>}
               </div>
-              <div className="space-y-2 flex flex-col">
-                <Label htmlFor="passe" className="font-medium text-slate-700">
-                  Quantidade de Atendimento Passe
-                </Label>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="passe" className="font-medium text-slate-700">
+                    Quantidade de Atendimento Passe
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button" tabIndex={-1}>
+                      <Info className="h-4 w-4 text-slate-400 hover:text-slate-600 transition-colors" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Atendimento para visitantes ou médiuns convidados</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   id="passe"
                   type="number"
@@ -175,27 +206,31 @@ export function CloseEventModal({ isOpen, onClose, event, onConfirm }: CloseEven
                   className={passeError ? 'border-red-500 focus-visible:ring-red-500' : ''}
                   placeholder="Ex: 15"
                 />
-                {passeError && (
-                  <p className="text-red-500 text-xs font-medium mt-1">{passeError}</p>
-                )}
+                {passeError && <p className="text-red-500 text-xs font-medium">{passeError}</p>}
               </div>
             </>
           )}
         </div>
 
-        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-2">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-2">
           <Button
-            variant="outline"
+            type="button"
+            variant="ghost"
             onClick={onClose}
             disabled={isSubmitting}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium"
           >
             Cancelar
           </Button>
           <Button
+            type="button"
             onClick={handleConfirm}
             disabled={!isValid || isSubmitting || isLoadingData}
-            className={`w-full sm:w-auto transition-colors ${isValid ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+            className={`w-full sm:w-auto font-medium transition-colors ${
+              isValid
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-green-600/50 text-white cursor-not-allowed'
+            }`}
           >
             Confirmar
           </Button>
