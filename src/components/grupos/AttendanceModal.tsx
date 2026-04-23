@@ -85,11 +85,6 @@ export function AttendanceModal({
     })
   }
 
-  const handleSave = (closeEvent: boolean) => {
-    onSave(event.id, attendance, closeEvent)
-    onClose()
-  }
-
   const TitleContent = () => (
     <div className="flex items-center flex-wrap gap-2 pr-8">
       <span className="truncate">{event.name} - Lista</span>
@@ -232,28 +227,20 @@ export function AttendanceModal({
       <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
         {isClosed ? 'Fechar' : 'Cancelar'}
       </Button>
-      {!isClosed && (
+      {!isClosed && isOnline && pendingChanges.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
-          {isOnline && pendingChanges.length > 0 && (
-            <Button
-              variant="secondary"
-              onClick={triggerSync}
-              disabled={isSyncing}
-              className="w-full sm:w-auto bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
-            >
-              {isSyncing ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              Sincronizar manualmente
-            </Button>
-          )}
           <Button
-            onClick={() => handleSave(true)}
-            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
+            variant="secondary"
+            onClick={triggerSync}
+            disabled={isSyncing}
+            className="w-full sm:w-auto bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
           >
-            Fechar Evento
+            {isSyncing ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Sincronizar manualmente
           </Button>
         </div>
       )}
