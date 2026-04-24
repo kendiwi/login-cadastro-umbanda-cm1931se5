@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -18,7 +18,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import pb from '@/lib/pocketbase/client'
-import { Users, PlusCircle, Calendar as CalendarIcon, Crown, User as UserIcon } from 'lucide-react'
+import {
+  Users,
+  PlusCircle,
+  Calendar as CalendarIcon,
+  Crown,
+  User as UserIcon,
+  Trash2,
+  AlertTriangle,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
@@ -40,6 +48,11 @@ export default function Groups() {
   const [nome, setNome] = useState('')
   const [descricao, setDescricao] = useState('')
   const [icone, setIcone] = useState<File | null>(null)
+
+  // Delete modal state
+  const [groupToDelete, setGroupToDelete] = useState<{ id: string; nome: string } | null>(null)
+  const [deleteConfirmName, setDeleteConfirmName] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loadGroups = async () => {
     if (!user?.id) return
@@ -84,6 +97,25 @@ export default function Groups() {
       navigate(`/dashboard/grupos/${grupo.id}`)
     } catch (err) {
       setFieldErrors(extractFieldErrors(err))
+    }
+  }
+
+  const handleDeleteGroup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!groupToDelete) return
+    if (deleteConfirmName.trim().toLowerCase() !== groupToDelete.nome.trim().toLowerCase()) return
+
+    setIsDeleting(true)
+    try {
+      await pb.collection('grupos').delete(groupToDelete.id)
+      toast.success('Grupo excluído com sucesso!')
+      setGroupToDelete(null)
+      setDeleteConfirmName('')
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao excluir grupo. Tente novamente.')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -220,7 +252,7 @@ export default function Groups() {
               <Card
                 key={membro.id}
                 onClick={() => navigate(`/dashboard/grupos/${grupo.id}`)}
-                className="border-purple-200/60 bg-white hover:shadow-lg hover:shadow-purple-900/5 transition-all duration-300 cursor-pointer"
+                className="border-purple-200/60 bg-white hover:shadow-lg hover:shadow-purple-900/5 transition-all duration-300 cursor-pointer flex flex-col h-full"
               >
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start mb-2">
@@ -250,17 +282,85 @@ export default function Groups() {
                     {grupo.nome}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-grow">
                   <div className="flex items-center text-sm text-slate-600 mt-2">
                     <Users className="w-4 h-4 mr-2 text-purple-400" />
                     Membros ativos
                   </div>
                 </CardContent>
+                {membro.status === 'owner' && (
+                  <CardFooter className="pt-0 pb-4 flex justify-end">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="bg-[#ef4444] hover:bg-[#dc2626] text-white font-medium transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setGroupToDelete({ id: grupo.id, nome: grupo.nome })
+                        setDeleteConfirmName('')
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Excluir Grupo
+                    </Button>
+                  </CardFooter>
+                )}
               </Card>
             )
           })
         )}
       </div>
+
+      {/* Delete Group Modal */}
+      <Dialog open={!!groupToDelete} onOpenChange={(open) => !open && setGroupToDelete(null)}>
+        <DialogContent className="w-[90vw] max-w-[450px] border-red-200 rounded-xl data-[state=open]:duration-200">
+          <DialogHeader>
+            <DialogTitle className="text-xl sm:text-2xl font-serif text-red-600 flex items-center gap-2">
+              <AlertTriangle className="w-6 h-6" />
+              <span className="font-bold">Excluir Grupo?</span>
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 text-sm mt-2">
+              Esta ação é irreversível. Todos os dados de presença, médiuns e eventos serão
+              deletados. Tem certeza?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="confirm-name" className="text-slate-700 font-medium">
+                Digite o nome do grupo para confirmar
+              </Label>
+              <Input
+                id="confirm-name"
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={groupToDelete?.nome}
+                className="border-slate-200 focus-visible:ring-red-500 focus-visible:border-red-500 transition-colors"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setGroupToDelete(null)}
+              className="w-full sm:w-auto border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                isDeleting ||
+                deleteConfirmName.trim().toLowerCase() !== groupToDelete?.nome?.trim().toLowerCase()
+              }
+              onClick={handleDeleteGroup}
+              className="w-full sm:w-auto bg-[#ef4444] hover:bg-[#dc2626] text-white font-semibold transition-colors disabled:opacity-50"
+            >
+              Excluir Permanentemente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
