@@ -136,6 +136,52 @@ export function ConfiguracoesTab({
           </CardFooter>
         </form>
       </Card>
+
+      <Card className="border-red-100 shadow-sm max-w-2xl mt-8">
+        <CardHeader>
+          <CardTitle className="text-lg text-red-900">Ações Administrativas</CardTitle>
+          <CardDescription>
+            Ações em massa para os membros do grupo. Estas operações afetarão o banco de dados de
+            forma irreversível.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <h3 className="font-medium text-slate-900">Padronizar Data de Início</h3>
+            <p className="text-sm text-slate-500 mb-2">
+              Define a data de início de atividades para "01/01/2026" para todos os médiuns do
+              sistema.
+            </p>
+            <Button
+              variant="destructive"
+              disabled={loading}
+              onClick={async () => {
+                if (
+                  !window.confirm(
+                    'Tem certeza que deseja padronizar a data de início de TODOS os médiuns do sistema? Esta ação não pode ser desfeita.',
+                  )
+                )
+                  return
+                setLoading(true)
+                try {
+                  const res = await pb.send('/backend/v1/atualizar-data-inicio-mediuns', {
+                    method: 'POST',
+                  })
+                  toast.success(
+                    `${res.data?.quantidade_atualizada || 0} médiuns atualizados com sucesso!`,
+                  )
+                } catch (error: any) {
+                  toast.error(error.response?.error || 'Erro ao atualizar dados em massa')
+                } finally {
+                  setLoading(false)
+                }
+              }}
+            >
+              {loading ? 'Processando...' : 'Padronizar Datas'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
