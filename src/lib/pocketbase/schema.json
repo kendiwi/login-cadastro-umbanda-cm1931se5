@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T01:49:44.323Z",
+  "generatedAt": "2026-05-06T00:50:30.607Z",
   "collections": [
     {
       "name": "users",
@@ -287,6 +287,12 @@
         {
           "name": "ativo",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_inicio_atividades",
+          "type": "date",
           "required": false,
           "system": false
         }

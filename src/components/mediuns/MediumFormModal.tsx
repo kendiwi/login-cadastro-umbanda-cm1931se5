@@ -27,6 +27,7 @@ export function MediumFormModal({ isOpen, onClose, onSave, initialData }: Medium
   const [dataNascimento, setDataNascimento] = useState('')
   const [contato, setContato] = useState('')
   const [foto, setFoto] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
 
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -38,6 +39,7 @@ export function MediumFormModal({ isOpen, onClose, onSave, initialData }: Medium
       setDataNascimento(initialData?.data_nascimento || '')
       setContato(initialData?.contato || '')
       setFoto(initialData?.foto || '')
+      setDataInicio(initialData?.data_inicio_atividades || new Date().toISOString().split('T')[0])
       setIsCameraOpen(false)
     } else {
       stopCamera()
@@ -45,8 +47,14 @@ export function MediumFormModal({ isOpen, onClose, onSave, initialData }: Medium
   }, [isOpen, initialData])
 
   const handleSave = () => {
-    if (!nome.trim()) return
-    onSave({ nome, data_nascimento: dataNascimento, contato, foto })
+    if (!nome.trim() || !dataInicio) return
+    onSave({
+      nome,
+      data_nascimento: dataNascimento,
+      contato,
+      foto,
+      data_inicio_atividades: dataInicio,
+    })
   }
 
   const startCamera = async () => {
@@ -234,17 +242,32 @@ export function MediumFormModal({ isOpen, onClose, onSave, initialData }: Medium
                     className="border-purple-200 focus-visible:ring-purple-500"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="dataNascimento" className="text-purple-900 font-medium">
-                    Data de Nascimento
-                  </Label>
-                  <Input
-                    id="dataNascimento"
-                    type="date"
-                    value={dataNascimento}
-                    onChange={(e) => setDataNascimento(e.target.value)}
-                    className="border-purple-200 focus-visible:ring-purple-500"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="dataInicio" className="text-purple-900 font-medium">
+                      Início das Atividades <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="dataInicio"
+                      type="date"
+                      value={dataInicio}
+                      onChange={(e) => setDataInicio(e.target.value)}
+                      className="border-purple-200 focus-visible:ring-purple-500"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="dataNascimento" className="text-purple-900 font-medium">
+                      Data de Nascimento
+                    </Label>
+                    <Input
+                      id="dataNascimento"
+                      type="date"
+                      value={dataNascimento}
+                      onChange={(e) => setDataNascimento(e.target.value)}
+                      className="border-purple-200 focus-visible:ring-purple-500"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="contato" className="text-purple-900 font-medium">
@@ -271,7 +294,7 @@ export function MediumFormModal({ isOpen, onClose, onSave, initialData }: Medium
               <Button
                 onClick={handleSave}
                 className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white shadow-md"
-                disabled={!nome.trim()}
+                disabled={!nome.trim() || !dataInicio}
               >
                 {initialData ? 'Salvar Alterações' : 'Cadastrar Médium'}
               </Button>

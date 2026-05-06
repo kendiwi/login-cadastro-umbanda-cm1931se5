@@ -33,17 +33,26 @@ export async function getEventSummary(eventId: string): Promise<EventSummaryData
   })
   const mediumMap = new Map(mediunsList.map((m) => [m.id, m]))
 
-  let expectedMediumIds: string[] = []
+  let rawExpectedMediumIds: string[] = []
   if (event.lista_id) {
     const listaMediuns = await pb.collection('lista_mediuns').getFullList({
       filter: `lista_id = "${event.lista_id}"`,
     })
-    expectedMediumIds = listaMediuns.map((lm) => lm.medium_id)
+    rawExpectedMediumIds = listaMediuns.map((lm) => lm.medium_id)
   } else {
-    expectedMediumIds = mediunsList.filter((m) => m.ativo).map((m) => m.id)
+    rawExpectedMediumIds = mediunsList.filter((m) => m.ativo).map((m) => m.id)
   }
 
   const eventDateStr = event.data.split(' ')[0]
+
+  const expectedMediumIds = rawExpectedMediumIds.filter((mId) => {
+    const medium = mediumMap.get(mId)
+    const mStartDate = medium?.data_inicio_atividades
+      ? medium.data_inicio_atividades.split(' ')[0]
+      : ''
+    return !mStartDate || eventDateStr >= mStartDate
+  })
+
   const licencas = await pb.collection('licencas_mediuns').getFullList({
     filter: `data_inicio <= "${eventDateStr} 23:59:59" && data_fim >= "${eventDateStr} 00:00:00"`,
   })

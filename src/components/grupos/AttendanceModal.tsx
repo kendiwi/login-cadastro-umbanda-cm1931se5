@@ -132,20 +132,28 @@ export function AttendanceModal({
       <div className="space-y-3 pb-8 px-4 sm:px-6">
         {expectedMediuns.map((m) => {
           const isEmLicenca = m.licenca === true
+          const eventDateStr = event.date.split(' ')[0]
+          const mStartDate = m.data_inicio_atividades ? m.data_inicio_atividades.split(' ')[0] : ''
+          const notActiveYet = mStartDate && eventDateStr < mStartDate
 
           return (
             <div
               key={m.id}
               className={cn(
                 'flex items-center justify-between p-3 rounded-lg border shadow-sm transition-all duration-300 gap-3',
-                isEmLicenca
+                isEmLicenca || notActiveYet
                   ? 'bg-slate-50 border-slate-200'
                   : savingIds.has(m.id)
                     ? 'bg-purple-50/50 border-purple-200 ring-1 ring-purple-100'
                     : 'bg-white border-purple-50 hover:border-purple-200',
               )}
             >
-              <div className="flex items-center gap-3 overflow-hidden min-w-0">
+              <div
+                className={cn(
+                  'flex items-center gap-3 overflow-hidden min-w-0',
+                  notActiveYet && 'opacity-50',
+                )}
+              >
                 <Avatar
                   className={cn(
                     'w-10 h-10 border shrink-0',
@@ -171,9 +179,14 @@ export function AttendanceModal({
                     >
                       {m.nome}
                     </p>
-                    {isEmLicenca && (
+                    {isEmLicenca && !notActiveYet && (
                       <span className="inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700 ring-1 ring-inset ring-red-600/10 whitespace-nowrap">
                         🔴 Em Licença
+                      </span>
+                    )}
+                    {notActiveYet && (
+                      <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 whitespace-nowrap">
+                        Médium ativo desde {mStartDate.split('-').reverse().join('/')}
                       </span>
                     )}
                   </div>
@@ -202,7 +215,7 @@ export function AttendanceModal({
                   <Switch
                     checked={!!attendance[m.id]}
                     onCheckedChange={(c) => handleToggle(m.id, c)}
-                    disabled={isClosed || isEmLicenca || savingIds.has(m.id)}
+                    disabled={isClosed || isEmLicenca || notActiveYet || savingIds.has(m.id)}
                     className={cn(
                       'data-[state=checked]:bg-emerald-500 transition-opacity',
                       savingIds.has(m.id) && 'opacity-50',

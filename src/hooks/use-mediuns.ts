@@ -11,6 +11,7 @@ export interface Medium {
   foto: string
   licenca?: boolean
   ativo?: boolean
+  data_inicio_atividades?: string
 }
 
 export function useMediuns(grupoId: string, options?: { activeOnly?: boolean }) {
@@ -34,6 +35,9 @@ export function useMediuns(grupoId: string, options?: { activeOnly?: boolean }) 
           nome: r.nome,
           data_nascimento: r.data_nascimento ? r.data_nascimento.split(' ')[0] : '',
           contato: r.contato || '',
+          data_inicio_atividades: r.data_inicio_atividades
+            ? r.data_inicio_atividades.split(' ')[0]
+            : '',
           foto: r.foto ? pb.files.getURL(r, r.foto) : '',
           licenca: r.licenca || false,
           ativo: r.ativo !== false,
@@ -62,6 +66,9 @@ export function useMediuns(grupoId: string, options?: { activeOnly?: boolean }) 
       formData.append('data_nascimento', medium.data_nascimento + ' 12:00:00.000Z')
     }
     formData.append('contato', medium.contato || '')
+    if (medium.data_inicio_atividades) {
+      formData.append('data_inicio_atividades', medium.data_inicio_atividades + ' 12:00:00.000Z')
+    }
     if (medium.licenca !== undefined) {
       formData.append('licenca', String(medium.licenca))
     }
@@ -85,6 +92,12 @@ export function useMediuns(grupoId: string, options?: { activeOnly?: boolean }) 
       )
     }
     if (medium.contato !== undefined) formData.append('contato', medium.contato || '')
+    if (medium.data_inicio_atividades !== undefined) {
+      formData.append(
+        'data_inicio_atividades',
+        medium.data_inicio_atividades ? medium.data_inicio_atividades + ' 12:00:00.000Z' : '',
+      )
+    }
     if (medium.licenca !== undefined) formData.append('licenca', String(medium.licenca))
 
     if (medium.foto && medium.foto.startsWith('data:image')) {
